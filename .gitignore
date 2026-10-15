@@ -13,3 +13,6 @@ InventarioAR-main/php/config.local.php
 *.sql
 !InventarioAR-main/db/schema.sql
 !InventarioAR-main/db/migraciones/*.sql
+
+# Capturas de tools/snapshot_api.php (contienen datos reales).
+InventarioAR-main/tools/snapshots/
