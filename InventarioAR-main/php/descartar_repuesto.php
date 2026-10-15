@@ -1,10 +1,9 @@
 <?php
-require_once 'auth.php';
+// Descarte (baja definitiva de unidades irreparables): - fuera_servicio (taller).
+require_once 'repuestos_comun.php';
 $user = requireAuth();
 
-$archivo_log = __DIR__ . '/logs/errores_importacion.log';
 $id_repuesto = null;
-$taller = null;
 
 try {
     $datos = getJsonInput();
@@ -12,79 +11,36 @@ try {
         sendError("No se recibieron datos", 400);
     }
 
-    $id_repuesto = $datos['id_repuesto'] ?? null;
-    $taller      = $datos['taller'] ?? null;
-    $cantidad    = (int)($datos['cantidad'] ?? 0);
-
-    if (!$id_repuesto || !$taller) {
-        sendError("Faltan id_repuesto o taller", 400);
-    }
-    if ($cantidad <= 0) {
-        sendError("La cantidad tiene que ser mayor a 0", 400);
-    }
-
     $pdo = getConnection();
-
-    $stmt_existe = $pdo->prepare("SELECT COUNT(*) FROM repuestos WHERE id_repuesto = ?");
-    $stmt_existe->execute([$id_repuesto]);
-    if ($stmt_existe->fetchColumn() == 0) {
-        sendError("No se encontró el repuesto con id_repuesto = $id_repuesto", 404);
-    }
-
-    $stmt_id_taller = $pdo->prepare("SELECT id_taller FROM talleres WHERE taller = ?");
-    $stmt_id_taller->execute([$taller]);
-    $id_taller = $stmt_id_taller->fetchColumn();
-
-    if ($id_taller === false) {
-        sendError("Taller no encontrado: $taller", 400);
-    }
+    $id_repuesto = exigirRepuesto($pdo, $datos['id_repuesto'] ?? null);
+    $taller      = $datos['taller'] ?? null;
+    $id_taller   = idTaller($pdo, $taller);
+    $cantidad    = leerEntero($datos['cantidad'] ?? null, 'La cantidad', 1);
 
     $pdo->beginTransaction();
 
-    $stmt_fuera_servicio = $pdo->prepare(
+    $stmt = $pdo->prepare(
         "SELECT fuera_servicio FROM repuesto_stock
-         WHERE id_repuesto = ? AND id_taller = ?
-         FOR UPDATE"   // bloquea la fila hasta el commit, evita que dos
-                        // pedidos simultáneos resten del mismo stock a la vez
-    );
-    $stmt_fuera_servicio->execute([$id_repuesto, $id_taller]);
-    $stock_fuera_servicio = $stmt_fuera_servicio->fetchColumn();
+          WHERE id_repuesto = ? AND id_taller = ? FOR UPDATE");
+    $stmt->execute([$id_repuesto, $id_taller]);
+    $fuera_servicio = (int)$stmt->fetchColumn();   // sin fila = 0
 
-    if ($stock_fuera_servicio === false) {
+    if ($fuera_servicio < $cantidad) {
         $pdo->rollBack();
-        sendError("No hay repuesos fuera de servicio.", 400);
+        sendError("Repuestos fuera de servicio insuficientes en $taller (disponible: $fuera_servicio, pedido: $cantidad)", 400);
     }
 
-    // Validar ANTES de tocar nada.
-    if ($stock_fuera_servicio < $cantidad) {
-        $pdo->rollBack();
-        sendError("Repuestos fuera de serivicio insuficientes. (disponible: $stock_fuera_servicio, pedido: $cantidad)", 400);
-    }
-
-    // Recién ahora, con la validación ya hecha, se modifica la base.
     $pdo->prepare(
-        "UPDATE repuesto_stock SET fuera_servicio = fuera_servicio - ?
-         WHERE id_repuesto = ? AND id_taller = ?"
-    )->execute([$cantidad, $id_repuesto, $id_taller]);
-
-    $fecha = date("Y-m-d H:i:s");
-
-    $pdo->prepare(
-        "UPDATE repuesto_stock SET baja_repuesto = COALESCE(baja_repuesto, 0) + ?, ultima_fecha_baja = ?
-         WHERE id_repuesto = ? AND id_taller = ?"
-    )->execute([$cantidad, $fecha, $id_repuesto, $id_taller]);
-
+        "UPDATE repuesto_stock
+            SET fuera_servicio = fuera_servicio - ?,
+                baja_repuesto = COALESCE(baja_repuesto, 0) + ?,
+                ultima_fecha_baja = NOW()
+          WHERE id_repuesto = ? AND id_taller = ?"
+    )->execute([$cantidad, $cantidad, $id_repuesto, $id_taller]);
     $pdo->commit();
 
-    sendSuccess(['id_repuesto' => (int)$id_repuesto], "Repuesto descartado correctamente");
+    sendSuccess(['id_repuesto' => $id_repuesto], "Repuesto descartado correctamente");
 
 } catch (Throwable $e) {
-    if (isset($pdo) && $pdo->inTransaction()) {
-        $pdo->rollBack();
-    }
-    $linea = date('Y-m-d H:i:s') . " | descartar_repuesto | id_repuesto = " . ($id_repuesto ?? 'N/A')
-           . " | taller=" . ($taller ?? 'N/A')
-           . " | usuario=" . ($user['id'] ?? 'N/A') . " | " . $e->getMessage();
-    @file_put_contents($archivo_log, $linea . PHP_EOL, FILE_APPEND);
-    sendError("Error: " . $e->getMessage(), 500);
+    fallaRepuesto($e, 'descartar_repuesto', $id_repuesto, $user, "No se pudo descartar. Intente nuevamente.");
 }

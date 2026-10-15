@@ -103,6 +103,12 @@ export function tablaSeleccionable({ columnas, etiqueta, unidad = 'filas', alSel
         nodo,
         contador,
         mostrar,
+        /** Vuelve a seleccionar la fila que cumpla `condicion` (p. ej. tras recargar los datos). */
+        seleccionarDonde(condicion) {
+            const indice = filas.findIndex(condicion);
+            seleccionar(indice >= 0 ? filas[indice] : null);
+            if (indice >= 0) cuerpo.children[indice]?.scrollIntoView({ block: 'nearest' });
+        },
         get seleccionada() { return seleccionada; },
         get filas() { return filas; },
     };
