@@ -1,0 +1,6 @@
+# Raíz del repositorio (solo existe en el entorno local: al hosting se sube
+# InventarioAR-main). Que nunca se sirvan el historial de git ni los archivos ocultos.
+RedirectMatch 404 /\.git(/|$)
+<FilesMatch "^\.">
+    Require all denied
+</FilesMatch>

@@ -1,0 +1,12 @@
+# Reglas de acceso para todo el proyecto (se aplican también a las subcarpetas).
+# Lo único que tiene que ser público es web/ (páginas), php/ (API) y
+# resources/images/ (imágenes de los modelos).
+
+# Sin listados de carpetas.
+Options -Indexes
+
+# Archivos que nunca se sirven: volcados de la base, logs, código y datos
+# del cliente de escritorio, planillas, documentación y archivos ocultos.
+<FilesMatch "\.(sql|log|py|pyc|xlsx|xls|csv|md|bak|old|ini|dist)$|^\.">
+    Require all denied
+</FilesMatch>
