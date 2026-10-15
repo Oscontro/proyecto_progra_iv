@@ -1,6 +1,6 @@
 <?php
-// Funciones compartidas por los endpoints de equipos: alta (alta_equipo.php,
-// ingreso_equipos.php) y modificación (modiEquipo.php).
+// Funciones compartidas por los endpoints de equipos: alta (alta_equipo.php)
+// y modificación (modiEquipo.php).
 //
 // Catálogos:
 //   tipos, marcas, escalas -> por nombre.
@@ -10,13 +10,6 @@
 //                            los desplegables, por eso se crea siempre con tipo.
 require_once 'auth.php';
 
-// Textos que muestran los desplegables del escritorio cuando no hay nada elegido.
-const TEXTOS_DE_RELLENO = [
-    'PRIMERO SELECCIONE EL TIPO', 'PRIMERO SELECCIONE MARCA', 'PRIMERO SELECCIONE LA MARCA',
-    'SIN MODELOS PARA ESTA MARCA Y TIPO', 'ESCRIBA O SELECCIONE', 'SELECCIONE O ESCRIBA...', 'TODOS',
-];
-// Textos que el escritorio muestra en lugar de una plantilla real.
-const PLANTILLA_PLACEHOLDERS = ['', 'Sin plantilla cargada', 'Equipo programado sin plantilla'];
 const CODIFICACIONES = ['SQL', 'DPL', 'TPL'];
 
 function textoOpcional($valor): ?string {
@@ -24,15 +17,12 @@ function textoOpcional($valor): ?string {
     return $valor === '' ? null : $valor;
 }
 
-/** Texto obligatorio con largo máximo; corta con 400 si falta, sobra o es un texto de relleno. */
+/** Texto obligatorio con largo máximo; corta con 400 si falta o sobra. */
 function textoObligatorio($valor, string $campo, int $maximo): string {
     // En los catálogos los espacios repetidos generarían valores "distintos".
     $valor = textoOpcional(preg_replace('/\s+/u', ' ', (string)($valor ?? '')));
     if ($valor === null) {
         sendError("Falta $campo", 400);
-    }
-    if (in_array(mb_strtoupper($valor), TEXTOS_DE_RELLENO, true)) {
-        sendError("Elija $campo (\"$valor\" no es un valor válido)", 400);
     }
     if (mb_strlen($valor) > $maximo) {
         sendError(ucfirst($campo) . " admite hasta $maximo caracteres", 400);
@@ -85,9 +75,9 @@ function normalizarCanales(array $canales): array {
         }
         $vistos[$numero] = true;
 
-        // El escritorio manda "Ninguno" cuando no se marcó codificación.
+        // Sin codificación: null (o vacío).
         $codificacion = strtoupper(trim((string)($canal['codificacion'] ?? '')));
-        if ($codificacion === '' || $codificacion === 'NINGUNO') {
+        if ($codificacion === '') {
             $codificacion = null;
         } elseif (!in_array($codificacion, CODIFICACIONES, true)) {
             sendError("Canal $numero: codificación \"$codificacion\" no válida", 400);
@@ -106,10 +96,10 @@ function normalizarCanales(array $canales): array {
     return $resultado;
 }
 
-/** Nombre de plantilla real, o null si es un texto de relleno del escritorio. */
-function nombrePlantilla($valor): ?string {
-    $nombre = textoOpcional($valor);
-    return in_array((string)$nombre, PLANTILLA_PLACEHOLDERS, true) ? null : mb_substr($nombre, 0, 150);
+/** Nombre de la plantilla (nombre_config del primer canal), o null si no tiene. */
+function nombrePlantilla(array $canales): ?string {
+    $nombre = textoOpcional($canales[0]['nombre_config'] ?? null);
+    return $nombre === null ? null : mb_substr($nombre, 0, 150);
 }
 
 /** Reemplaza la programación de canales de un equipo (canales ya normalizados). */
@@ -152,7 +142,7 @@ function buscarId(PDO $pdo, string $sql, array $params): ?int {
  * Alta de un equipo.
  *
  *   $equipo:       tipo, marca, modelo, numero_serie, escala, sector, estado,
- *                  potencia (o valor_potencia), ult_observacion, nombre_plantilla
+ *                  potencia, ult_observacion
  *   $programacion: { canales: [...] } (opcional)
  *   $crearNuevos:  si es false y hay valores de catálogo que no existen, corta
  *                  con 409 (code CATALOGO_NUEVO) y la lista en "nuevos", para
@@ -170,7 +160,7 @@ function altaEquipo(PDO $pdo, array $user, array $equipo, array $programacion,
     $escala   = mb_strtoupper(textoObligatorio($equipo['escala'] ?? null, 'la escala', 3));
     $sector   = textoObligatorio($equipo['sector'] ?? null, 'el sector', 100);
     $estado   = textoObligatorio($equipo['estado'] ?? null, 'el estado', 100);
-    $potencia = textoOpcional($equipo['valor_potencia'] ?? $equipo['potencia'] ?? null);
+    $potencia = textoOpcional($equipo['potencia'] ?? null);
     $obs      = textoOpcional($equipo['ult_observacion'] ?? null);
     if ($potencia !== null && mb_strlen($potencia) > 50) {
         sendError("La potencia admite hasta 50 caracteres", 400);
@@ -179,7 +169,7 @@ function altaEquipo(PDO $pdo, array $user, array $equipo, array $programacion,
         sendError("Las observaciones admiten hasta 255 caracteres", 400);
     }
     $canales = normalizarCanales((array)($programacion['canales'] ?? []));
-    $plantilla = nombrePlantilla($equipo['nombre_plantilla'] ?? ($programacion['canales'][0]['nombre_config'] ?? null));
+    $plantilla = nombrePlantilla((array)($programacion['canales'] ?? []));
 
     // ── N° de serie único (también contra los equipos en la papelera) ──
     $stmt = $pdo->prepare("SELECT en_papelera FROM equipos WHERE numero_serie = ?");

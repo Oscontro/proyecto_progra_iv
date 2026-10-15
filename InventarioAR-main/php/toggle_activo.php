@@ -13,7 +13,7 @@ try {
         sendError("Faltan datos", 400);
     }
     $legajo = $datos['legajo'] ?? null;
-    $activo = leerBooleano($datos['activo']);
+    $activo = leerBooleano($datos['activo'], 'activo');
 
     $pdo = getConnection();
     $actual = usuarioPorLegajo($pdo, $legajo);

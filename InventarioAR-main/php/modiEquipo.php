@@ -17,8 +17,7 @@ try {
     $programacion = $datos['frecuencias'] ?? [];
     $canales      = normalizarCanales((array)($programacion['canales'] ?? []));
 
-    $id_equipo    = $equipo['id_equipo'] ?? null;
-    $numero_serie = textoOpcional($equipo['numero_serie'] ?? null);
+    $id_equipo    = filter_var($equipo['id_equipo'] ?? null, FILTER_VALIDATE_INT);
     $tipo         = textoOpcional($equipo['tipo'] ?? null);
     $marca        = textoOpcional($equipo['marca'] ?? null);
     $modelo       = textoOpcional($equipo['modelo_equipo'] ?? null);
@@ -26,22 +25,19 @@ try {
     $sector       = textoOpcional($equipo['sector'] ?? null);
     $estado       = textoOpcional($equipo['estado'] ?? null);
     $observacion  = textoOpcional($equipo['observaciones'] ?? null);
-    // La web manda "valor_potencia"; el escritorio, "potencia". Si no viene
-    // ninguna de las dos, la potencia guardada no se toca.
-    $hay_potencia = array_key_exists('valor_potencia', $equipo) || array_key_exists('potencia', $equipo);
-    $potencia     = textoOpcional($equipo['valor_potencia'] ?? $equipo['potencia'] ?? null);
+    // Si no viene valor_potencia, la potencia guardada no se toca.
+    $hay_potencia = array_key_exists('valor_potencia', $equipo);
+    $potencia     = textoOpcional($equipo['valor_potencia'] ?? null);
 
-    if (!$id_equipo && !$numero_serie) {
+    if (!$id_equipo) {
         sendError("Falta identificar el equipo", 400);
     }
 
     $pdo = getConnection();
 
     // ── El equipo tiene que existir y estar en el inventario activo ──
-    $stmt = $id_equipo
-        ? $pdo->prepare("SELECT id_equipo, numero_serie, tipo, marca, en_papelera, en_taller FROM equipos WHERE id_equipo = ?")
-        : $pdo->prepare("SELECT id_equipo, numero_serie, tipo, marca, en_papelera, en_taller FROM equipos WHERE numero_serie = ?");
-    $stmt->execute([$id_equipo ?: $numero_serie]);
+    $stmt = $pdo->prepare("SELECT id_equipo, numero_serie, tipo, marca, en_papelera, en_taller FROM equipos WHERE id_equipo = ?");
+    $stmt->execute([$id_equipo]);
     $actual = $stmt->fetch(PDO::FETCH_ASSOC);
     if (!$actual) {
         sendError("No se encontró el equipo", 404);
@@ -122,7 +118,7 @@ try {
     // no se acumula una cabecera nueva en cada guardado. Sin canales, la
     // programación existente queda como está.
     if ($canales) {
-        $nombre_plantilla = nombrePlantilla($programacion['canales'][0]['nombre_config'] ?? null);
+        $nombre_plantilla = nombrePlantilla((array)$programacion['canales']);
         $sets[] = 'nombre_plantilla = :nombre_plantilla';
         $params[':nombre_plantilla'] = $nombre_plantilla;
     }

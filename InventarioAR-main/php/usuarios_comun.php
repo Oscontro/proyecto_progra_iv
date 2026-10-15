@@ -41,17 +41,15 @@ function datosUsuario(array $datos): array {
         sendError("Perfil no válido (Técnico o Administrador)", 400);
     }
     $resultado['es_administrador'] = PERFILES[$perfil];
-    $resultado['activo'] = leerBooleano($datos['activo'] ?? true);
+    $resultado['activo'] = leerBooleano($datos['activo'] ?? true, 'activo');
     return $resultado;
 }
 
-/** true/false o 1/0 (también acepta "activar"). */
-function leerBooleano($valor): int {
-    if (is_string($valor)) {
-        $valor = strtolower(trim($valor));
-        return in_array($valor, ['1', 'true', 'si', 'sí', 'activar'], true) ? 1 : 0;
-    }
-    return $valor ? 1 : 0;
+/** true/false (o 1/0) como 1/0; cualquier otro valor corta con 400 en vez de interpretarse. */
+function leerBooleano($valor, string $campo): int {
+    if (in_array($valor, [true, 1, '1'], true)) return 1;
+    if (in_array($valor, [false, 0, '0'], true)) return 0;
+    sendError("El campo $campo debe ser true o false", 400);
 }
 
 /**

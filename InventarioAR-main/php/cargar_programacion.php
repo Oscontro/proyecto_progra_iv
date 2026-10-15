@@ -7,19 +7,9 @@ $archivo_log = __DIR__ . '/logs/errores_importacion.log';
 try {
     $pdo = getConnection();
 
-    // Se acepta id_equipo (web) o numero_serie (escritorio).
-    $id_equipo    = filter_var($_GET['id_equipo'] ?? null, FILTER_VALIDATE_INT);
-    $numero_serie = trim($_GET['numero_serie'] ?? '');
-    if (!$id_equipo && $numero_serie === '') {
-        sendError('Falta identificar el equipo', 400);
-    }
+    $id_equipo = filter_var($_GET['id_equipo'] ?? null, FILTER_VALIDATE_INT);
     if (!$id_equipo) {
-        $stmt = $pdo->prepare("SELECT id_equipo FROM equipos WHERE numero_serie = ?");
-        $stmt->execute([$numero_serie]);
-        $id_equipo = $stmt->fetchColumn();
-        if ($id_equipo === false) {
-            sendError("No se encontró el equipo '$numero_serie'", 404);
-        }
+        sendError('Falta identificar el equipo (id_equipo)', 400);
     }
 
     // Si quedaron cabeceras duplicadas de versiones anteriores, vale la última.

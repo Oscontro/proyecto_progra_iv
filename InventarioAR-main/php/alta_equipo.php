@@ -4,11 +4,9 @@
 // Entrada: { equipo: {...}, frecuencias: { canales: [...] },
 //            crear_nuevos?: bool, solo_validar?: bool }
 //
-// Valores de catálogo (tipo, marca, modelo, escala) que no existen:
-//   - La web manda crear_nuevos = false: se responde 409 CATALOGO_NUEVO con
-//     la lista "nuevos"; el usuario confirma y se reenvía con true.
-//   - El cliente de escritorio no manda la clave: se crean como antes
-//     (compatibilidad hasta retirar el escritorio en la fase 4).
+// Valores de catálogo (tipo, marca, modelo, escala) que no existen: salvo
+// que llegue crear_nuevos = true, se responde 409 CATALOGO_NUEVO con la lista
+// "nuevos"; el usuario confirma y la web reenvía con crear_nuevos = true.
 // solo_validar = true valida todo y devuelve "nuevos" sin guardar nada
 // (lo usa la importación desde Excel para revisar el archivo antes).
 require_once 'equipos_comun.php';
@@ -27,7 +25,7 @@ try {
     $equipo       = (array)($datos['equipo'] ?? []);
     $programacion = (array)($datos['frecuencias'] ?? []);
     $numero_serie = $equipo['numero_serie'] ?? null;
-    $crearNuevos  = array_key_exists('crear_nuevos', $datos) ? (bool)$datos['crear_nuevos'] : true;
+    $crearNuevos  = ($datos['crear_nuevos'] ?? false) === true;
     $soloValidar  = !empty($datos['solo_validar']);
 
     $pdo = getConnection();

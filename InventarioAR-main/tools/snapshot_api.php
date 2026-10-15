@@ -20,17 +20,16 @@
 const ENDPOINTS = [
     // Catálogos
     'escalas.php', 'estados.php', 'estados_taller.php', 'marcas.php', 'marcas.php?id_tipo=1',
-    'modelos.php', 'modelos.php?id_tipo=1&id_marca=1', 'modelos_inventario.php',
+    'modelos.php', 'modelos.php?id_tipo=1&id_marca=1',
     'modelo_con_marca.php', 'plantillas.php', 'potencias.php', 'sectores.php',
-    'talleres.php', 'tipos.php', 'tipo_vehiculo.php', 'anios.php',
+    'talleres.php', 'tipos.php', 'anios.php',
     // Inventario / taller / repuestos / papelera
     'consultaInventario.php', 'vista_taller.php', 'repuestos.php', 'inventario_historial.php',
     'historialEquipo.php?id_equipo={id_equipo}',
-    'cargar_programacion.php?numero_serie={numero_serie}',
+    'cargar_programacion.php?id_equipo={id_equipo}',
     // Estadísticas
     'estadisticas_resumen.php', 'estadistica_equipos.php', 'estadistica_stock.php',
-    'estadistica_incidencias.php', 'estadistica_bajas.php', 'estadistica_distribucion.php',
-    'estadistica_distribucion_modelo.php', 'estadistica_distribucion_tipo.php', 'estadistica_repuestos.php',
+    'estadistica_incidencias.php', 'estadistica_bajas.php', 'estadistica_repuestos.php',
     // Administración (requiere admin)
     'usuarios.php',
 ];
