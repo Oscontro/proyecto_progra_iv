@@ -18,7 +18,20 @@ try {
     }
 
     $id_vehiculo = $datos['id_vehiculo'] ?? null;
-    
+    if (!$id_vehiculo) {
+        sendError("Falta el id del vehículo", 400);
+    }
+
+    $stmt = $pdo->prepare("SELECT de_baja FROM vehiculos WHERE id_vehiculo = ?");
+    $stmt->execute([$id_vehiculo]);
+    $de_baja = $stmt->fetchColumn();
+    if ($de_baja === false) {
+        sendError("No existe el vehículo", 404);
+    }
+    if (!$de_baja) {
+        sendError("El vehículo no está en la papelera", 409);
+    }
+
     $pdo->beginTransaction();
     $stmt = $pdo->prepare("CALL sp_restaurar_vehiculo_papelera(?, ?)");
     $stmt->execute([$id_vehiculo,  $user["id"]]);

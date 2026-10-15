@@ -6,8 +6,10 @@
 // Pendiente para una etapa posterior: editar, enviar a papelera y a reparación.
 
 import { ApiError, SesionExpirada, ClavePendiente } from '../api.js';
-import { el, aviso, tabla, textoCelda, campoSelect, llenarSelect, dialogo } from '../ui.js';
+import { el, aviso, textoCelda, campoSelect, llenarSelect } from '../ui.js';
 import { exportarExcel, fechaArchivo } from '../excel.js';
+import { tablaSeleccionable } from '../tabla_seleccionable.js';
+import { verHistorialEquipo } from '../historial.js';
 
 // Columnas visibles (el escritorio oculta potencia y nombre de plantilla).
 const COLUMNAS = [
@@ -21,23 +23,11 @@ const COLUMNAS = [
     { clave: 'ult_observacion', titulo: 'Observaciones' },
 ];
 
-const COLUMNAS_HISTORIAL = [
-    { titulo: 'Fecha', valor: (h) => h.fecha_evento },
-    { titulo: 'Usuario', valor: (h) => h.usuario_evento },
-    { titulo: 'Tipo de evento', valor: (h) => h.tipo_evento },
-    { titulo: 'Campo modificado', valor: (h) => h.campo_modificado },
-    { titulo: 'Valor anterior', valor: (h) => h.valor_anterior },
-    { titulo: 'Valor nuevo', valor: (h) => h.valor_nuevo },
-    { titulo: 'Observaciones', valor: (h) => h.observaciones },
-];
-
 const TODOS = '';
 
 export function montar(contenedor, { api }) {
     let completos = [];
     let filtrados = [];
-    let seleccionado = null;            // registro elegido (no índice: sobrevive a ordenar/filtrar)
-    let orden = { clave: null, ascendente: true };
     let tipos = [];                     // [{id_tipo, tipo}]
     let marcas = [];                    // [{id_marca, marca}] del tipo elegido
 
@@ -54,21 +44,21 @@ export function montar(contenedor, { api }) {
     const fEstado = campoSelect('Estado', [], { id: 'inv-estado', alCambiar: aplicarFiltros });
     reiniciarCascada();
 
-    // ── Tabla ──
-    const cuerpo = el('tbody');
-    const cabeceras = COLUMNAS.map((c) => el('th', { scope: 'col', 'aria-sort': 'none' },
-        el('button', { type: 'button', class: 'th-orden', onclick: () => ordenarPor(c.clave) }, c.titulo)));
-    const contenedorTabla = el('div', {
-        class: 'tabla-contenedor tabla-alta', tabindex: '0', role: 'region',
-        'aria-label': 'Equipos del inventario. Usá las flechas para elegir un equipo y Enter para ver su historial.',
-    }, el('table', { class: 'tabla tabla-seleccionable' },
-        el('thead', {}, el('tr', {}, cabeceras)), cuerpo));
-    const contador = el('p', { class: 'texto-suave contador' });
-
-    // ── Acciones ──
-    const btnHistorial = el('button', { type: 'button', class: 'btn btn-primario', disabled: true, onclick: verHistorial }, '📜 Ver historial');
+    // ── Tabla y acciones ──
+    const btnHistorial = el('button', { type: 'button', class: 'btn btn-primario', disabled: true, onclick: () => verHistorial() }, '📜 Ver historial');
     const btnCopiar = el('button', { type: 'button', class: 'btn btn-secundario', disabled: true, onclick: copiarFila }, '📋 Copiar fila');
     const btnExcel = el('button', { type: 'button', class: 'btn btn-exito', onclick: generarExcel }, '📊 Generar Excel');
+
+    const tabla = tablaSeleccionable({
+        columnas: COLUMNAS,
+        etiqueta: 'Equipos del inventario',
+        unidad: 'equipos',
+        alSeleccionar: (fila) => {
+            btnHistorial.disabled = !fila;
+            btnCopiar.disabled = !fila;
+        },
+        alActivar: verHistorial,
+    });
 
     contenedor.append(
         el('div', { class: 'cabecera-pestana' }, el('h2', {}, 'Inventario'), estado),
@@ -77,45 +67,14 @@ export function montar(contenedor, { api }) {
             el('button', { type: 'button', class: 'btn btn-secundario', onclick: limpiarFiltros }, 'Limpiar filtros'),
             el('button', { type: 'button', class: 'btn btn-secundario', onclick: () => cargar() }, '🔁 Actualizar')),
         el('div', { class: 'filtros' }, fTipo.nodo, fMarca.nodo, fModelo.nodo, fEscala.nodo, fSector.nodo, fEstado.nodo),
-        contador,
-        contenedorTabla,
+        tabla.contador,
+        tabla.nodo,
         el('div', { class: 'acciones-pie' },
             btnHistorial, btnCopiar, btnExcel,
             el('p', { class: 'texto-suave nota' },
                 'Editar, enviar a papelera y enviar a reparación: por ahora desde el cliente de escritorio.')));
 
     buscar.addEventListener('input', aplicarFiltros);
-
-    cuerpo.addEventListener('click', (evento) => {
-        const fila = evento.target.closest('tr[data-indice]');
-        if (fila) {
-            seleccionar(filtrados[Number(fila.dataset.indice)]);
-        }
-    });
-    cuerpo.addEventListener('dblclick', (evento) => {
-        if (evento.target.closest('tr[data-indice]')) {
-            verHistorial();
-        }
-    });
-    contenedorTabla.addEventListener('keydown', (evento) => {
-        if (!filtrados.length) return;
-        const actual = filtrados.indexOf(seleccionado);
-        let destino = null;
-        if (evento.key === 'ArrowDown') destino = Math.min(actual + 1, filtrados.length - 1);
-        if (evento.key === 'ArrowUp') destino = Math.max(actual - 1, 0);
-        if (evento.key === 'Home') destino = 0;
-        if (evento.key === 'End') destino = filtrados.length - 1;
-        if (evento.key === 'Enter' && seleccionado) {
-            evento.preventDefault();
-            verHistorial();
-            return;
-        }
-        if (destino !== null) {
-            evento.preventDefault();
-            seleccionar(filtrados[destino]);
-            cuerpo.children[destino]?.scrollIntoView({ block: 'nearest' });
-        }
-    });
 
     // ═══════════════ Datos ═══════════════
     async function cargar() {
@@ -134,10 +93,10 @@ export function montar(contenedor, { api }) {
             llenarSelect(fEscala.select, opcionesConTodos(escalas.map((e) => e.escala)));
             llenarSelect(fSector.select, opcionesConTodos(sectores.map((s) => s.sector)));
             llenarSelect(fEstado.select, opcionesConTodos(estados.map((e) => e.estado)));
-            estado.textContent = '';
             aplicarFiltros();
         } catch (error) {
             manejarError(error, 'No se pudo cargar el inventario');
+        } finally {
             estado.textContent = '';
         }
     }
@@ -215,82 +174,27 @@ export function montar(contenedor, { api }) {
             (!texto || String(e.numero_serie ?? '').toUpperCase().includes(texto))
             && filtros.every(([campo, valor]) => e[campo] === valor));
 
-        if (orden.clave) {
-            const { clave, ascendente } = orden;
-            const comparar = new Intl.Collator('es', { numeric: true, sensitivity: 'base' }).compare;
-            filtrados.sort((a, b) => (ascendente ? 1 : -1) * comparar(textoCelda(a[clave]), textoCelda(b[clave])));
-        }
-        if (!filtrados.includes(seleccionado)) {
-            seleccionado = null;
-        }
-        renderizar();
-    }
-
-    function ordenarPor(clave) {
-        orden = { clave, ascendente: orden.clave === clave ? !orden.ascendente : true };
-        cabeceras.forEach((th, i) => th.setAttribute('aria-sort',
-            COLUMNAS[i].clave === clave ? (orden.ascendente ? 'ascending' : 'descending') : 'none'));
-        aplicarFiltros();
-    }
-
-    // ═══════════════ Tabla ═══════════════
-    function renderizar() {
-        const fragmento = document.createDocumentFragment();
-        filtrados.forEach((equipo, i) => {
-            fragmento.append(el('tr', {
-                dataset: { indice: i },
-                class: equipo === seleccionado ? 'seleccionada' : null,
-                'aria-selected': String(equipo === seleccionado),
-            }, COLUMNAS.map((c) => el('td', {}, textoCelda(equipo[c.clave])))));
-        });
-        if (!filtrados.length) {
-            fragmento.append(el('tr', {}, el('td', { colspan: COLUMNAS.length, class: 'tabla-vacia' },
-                completos.length ? 'Ningún equipo coincide con los filtros' : 'Sin datos')));
-        }
-        cuerpo.replaceChildren(fragmento);
-        contador.textContent = `Mostrando ${filtrados.length} de ${completos.length} equipos`;
-        actualizarBotones();
-    }
-
-    function seleccionar(equipo) {
-        seleccionado = equipo;
-        for (const tr of cuerpo.querySelectorAll('tr[data-indice]')) {
-            const elegido = filtrados[Number(tr.dataset.indice)] === equipo;
-            tr.classList.toggle('seleccionada', elegido);
-            tr.setAttribute('aria-selected', String(elegido));
-        }
-        actualizarBotones();
-    }
-
-    function actualizarBotones() {
-        btnHistorial.disabled = !seleccionado;
-        btnCopiar.disabled = !seleccionado;
+        tabla.mostrar(filtrados, completos.length);
         btnExcel.disabled = !filtrados.length;
     }
 
     // ═══════════════ Acciones ═══════════════
-    async function verHistorial() {
-        if (!seleccionado) {
+    async function verHistorial(equipo = tabla.seleccionada) {
+        if (!equipo) {
             aviso('Debe seleccionar un equipo.', 'error');
             return;
         }
-        const equipo = seleccionado;
         try {
-            const historial = await api.get('historialEquipo.php', { id_equipo: equipo.id_equipo });
-            if (!historial?.length) {
-                aviso('No hay historial para este equipo.');
-                return;
-            }
-            dialogo(`Historial de ${textoCelda(equipo.marca)} ${textoCelda(equipo.modelo_equipo)} ${textoCelda(equipo.numero_serie)}`,
-                    tabla(COLUMNAS_HISTORIAL, historial), { ancho: 'ancho' });
+            await verHistorialEquipo(api, equipo);
         } catch (error) {
             manejarError(error, 'No se pudo cargar el historial');
         }
     }
 
     async function copiarFila() {
-        if (!seleccionado) return;
-        const texto = COLUMNAS.map((c) => textoCelda(seleccionado[c.clave])).join('\t');
+        const equipo = tabla.seleccionada;
+        if (!equipo) return;
+        const texto = COLUMNAS.map((c) => textoCelda(equipo[c.clave])).join('\t');
         try {
             await navigator.clipboard.writeText(texto);
             aviso('Fila copiada al portapapeles.', 'exito');
@@ -309,7 +213,7 @@ export function montar(contenedor, { api }) {
             console.error(error);
             aviso('No se pudo generar el Excel.', 'error');
         } finally {
-            actualizarBotones();
+            btnExcel.disabled = !filtrados.length;
         }
     }
 

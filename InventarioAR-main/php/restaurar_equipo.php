@@ -18,7 +18,20 @@ try {
     }
 
     $id_equipo = $datos['id_equipo'] ?? null;
-    
+    if (!$id_equipo) {
+        sendError("Falta el id del equipo", 400);
+    }
+
+    $stmt = $pdo->prepare("SELECT en_papelera FROM equipos WHERE id_equipo = ?");
+    $stmt->execute([$id_equipo]);
+    $en_papelera = $stmt->fetchColumn();
+    if ($en_papelera === false) {
+        sendError("No existe el equipo", 404);
+    }
+    if (!$en_papelera) {
+        sendError("El equipo no está en la papelera", 409);
+    }
+
     $pdo->beginTransaction();
     $stmt = $pdo->prepare("CALL sp_restaurar_equipo_papelera(?, ?)");
     $stmt->execute([$id_equipo,  $user['id']]);
