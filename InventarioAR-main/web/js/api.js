@@ -13,11 +13,12 @@
 const API_BASE = new URL('../php/', document.baseURI);
 
 export class ApiError extends Error {
-    constructor(mensaje, status = 0, code = null) {
+    constructor(mensaje, status = 0, code = null, datos = null) {
         super(mensaje);
         this.name = 'ApiError';
         this.status = status;
         this.code = code;
+        this.datos = datos;   // cuerpo completo del error (p. ej. "nuevos" en CATALOGO_NUEVO)
     }
 }
 
@@ -103,7 +104,7 @@ async function pedir(endpoint, { method = 'GET', params = null, datos = null, es
         throw new ApiError(mensaje || 'No tenés permisos para esta acción', 403);
     }
     if (respuesta.status >= 400) {
-        throw new ApiError(mensaje || `Error ${respuesta.status}`, respuesta.status, codigo);
+        throw new ApiError(mensaje || `Error ${respuesta.status}`, respuesta.status, codigo, esObjeto ? cuerpo : null);
     }
     if (esObjeto && cuerpo.success === false) {
         throw new ApiError(mensaje || 'La operación no se pudo completar', respuesta.status);

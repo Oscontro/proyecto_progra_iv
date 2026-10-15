@@ -15,7 +15,7 @@
 // `soloAdmin` solo oculta la pestaña: el permiso real lo controla la API.
 
 export const PESTANAS = [
-    { id: 'ingreso',        titulo: 'Ingreso de Equipos', icono: '📥', cargar: null },
+    { id: 'ingreso',        titulo: 'Ingreso de Equipos', icono: '📥', cargar: () => import('./pestanas/ingreso.js') },
     { id: 'inventario',     titulo: 'Inventario',         icono: '📦', cargar: () => import('./pestanas/inventario.js') },
     { id: 'taller',         titulo: 'Taller',             icono: '🛠️', cargar: () => import('./pestanas/taller.js') },
     { id: 'repuestos',      titulo: 'Repuestos',          icono: '🔩', cargar: () => import('./pestanas/repuestos.js') },

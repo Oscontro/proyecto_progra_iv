@@ -46,6 +46,20 @@ export async function exportarExcel(filas, nombreArchivo, { hoja = 'Sheet1', mar
     XLSX.writeFile(libro, nombreArchivo, { compression: true });
 }
 
+/**
+ * Lee la primera hoja de un archivo .xlsx/.xls (File del <input type="file">)
+ * y devuelve un array de objetos { encabezado: texto } (equivale a
+ * pd.read_excel(archivo, dtype=str)). Las celdas vacías quedan como ''.
+ */
+export async function leerExcel(archivo) {
+    const XLSX = await cargarSheetJS();
+    const libro = XLSX.read(await archivo.arrayBuffer(), { type: 'array' });
+    const hoja = libro.Sheets[libro.SheetNames[0]];
+    if (!hoja) return [];
+    // raw: false -> el texto tal como se ve en Excel (no pierde ceros a la izquierda de celdas de texto).
+    return XLSX.utils.sheet_to_json(hoja, { raw: false, defval: '' });
+}
+
 /** Fecha local en formato AAAA-MM-DD para nombres de archivo. */
 export function fechaArchivo(fecha = new Date()) {
     const dos = (n) => String(n).padStart(2, '0');

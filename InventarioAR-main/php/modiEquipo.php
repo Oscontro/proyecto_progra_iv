@@ -1,67 +1,11 @@
 <?php
-require_once 'auth.php';    // reemplaza a conexion.php, ya lo incluye adentro
+require_once 'equipos_comun.php';   // trae auth.php y conexion.php
 $user = requireAuth();
 
 $archivo_log = __DIR__ . '/logs/errores_importacion.log';
 
 $pdo = null;
 $numero_serie = null;
-
-// Textos que el cliente de escritorio muestra en lugar de una plantilla real.
-const PLANTILLA_PLACEHOLDERS = ['', 'Sin plantilla cargada', 'Equipo programado sin plantilla'];
-const CODIFICACIONES = ['SQL', 'DPL', 'TPL'];
-
-function textoOpcional($valor): ?string {
-    $valor = trim((string)($valor ?? ''));
-    return $valor === '' ? null : $valor;
-}
-
-// canales_detalle guarda las frecuencias como DECIMAL(10,3).
-function frecuencia($valor, int $canal, string $campo): ?string {
-    $valor = str_replace(',', '.', trim((string)($valor ?? '')));
-    if ($valor === '') {
-        return null;
-    }
-    if (!preg_match('/^\d{1,7}(\.\d{1,3})?$/', $valor)) {
-        sendError("Canal $canal: la frecuencia $campo \"$valor\" no es válida (formato 000.000)", 400);
-    }
-    return $valor;
-}
-
-/** Valida y normaliza los canales que manda el cliente. */
-function normalizarCanales(array $canales): array {
-    $resultado = [];
-    $vistos = [];
-    foreach ($canales as $i => $canal) {
-        $numero = filter_var($canal['numero_canal'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => 999]]);
-        if ($numero === false) {
-            sendError("El canal en la posición $i no tiene un número válido", 400);
-        }
-        if (isset($vistos[$numero])) {
-            sendError("El canal $numero está repetido", 400);
-        }
-        $vistos[$numero] = true;
-
-        // El escritorio manda "Ninguno" cuando no se marcó codificación.
-        $codificacion = strtoupper(trim((string)($canal['codificacion'] ?? '')));
-        if ($codificacion === '' || $codificacion === 'NINGUNO') {
-            $codificacion = null;
-        } elseif (!in_array($codificacion, CODIFICACIONES, true)) {
-            sendError("Canal $numero: codificación \"$codificacion\" no válida", 400);
-        }
-        // El código solo tiene sentido para DPL y TPL.
-        $codigo = in_array($codificacion, ['DPL', 'TPL'], true) ? textoOpcional($canal['codigo_squelch'] ?? null) : null;
-
-        $resultado[] = [
-            'numero_canal'   => $numero,
-            'frecuencia_tx'  => frecuencia($canal['frecuencia_tx'] ?? null, $numero, 'TX'),
-            'frecuencia_rx'  => frecuencia($canal['frecuencia_rx'] ?? null, $numero, 'RX'),
-            'codificacion'   => $codificacion,
-            'codigo_squelch' => $codigo !== null ? mb_substr($codigo, 0, 50) : null,
-        ];
-    }
-    return $resultado;
-}
 
 try {
     $datos = getJsonInput();
@@ -178,10 +122,7 @@ try {
     // no se acumula una cabecera nueva en cada guardado. Sin canales, la
     // programación existente queda como está.
     if ($canales) {
-        $nombre_plantilla = textoOpcional($programacion['canales'][0]['nombre_config'] ?? null);
-        if (in_array((string)$nombre_plantilla, PLANTILLA_PLACEHOLDERS, true)) {
-            $nombre_plantilla = null;
-        }
+        $nombre_plantilla = nombrePlantilla($programacion['canales'][0]['nombre_config'] ?? null);
         $sets[] = 'nombre_plantilla = :nombre_plantilla';
         $params[':nombre_plantilla'] = $nombre_plantilla;
     }
@@ -191,32 +132,7 @@ try {
     $rowsAffected = $stmt->rowCount();
 
     if ($canales) {
-        // canales_detalle se borra en cascada con su cabecera.
-        $pdo->prepare("DELETE FROM programacion_canales WHERE id_equipo = ?")->execute([$id_equipo]);
-
-        $pdo->prepare(
-            "INSERT INTO programacion_canales
-                (id_equipo, cantidad_canales, nombre_plantilla, usuario_programacion)
-             VALUES (?, ?, ?, ?)"
-        )->execute([$id_equipo, count($canales), $nombre_plantilla, $user['id']]);
-
-        $id_programacion = (int)$pdo->lastInsertId();
-
-        $stmt_canales = $pdo->prepare(
-            "INSERT INTO canales_detalle
-                (id_programacion, numero_canal, frecuencia_tx, frecuencia_rx, codificacion, codigo_squelch)
-             VALUES (?, ?, ?, ?, ?, ?)"
-        );
-        foreach ($canales as $canal) {
-            $stmt_canales->execute([
-                $id_programacion,
-                $canal['numero_canal'],
-                $canal['frecuencia_tx'],
-                $canal['frecuencia_rx'],
-                $canal['codificacion'],
-                $canal['codigo_squelch'],
-            ]);
-        }
+        guardarProgramacion($pdo, $id_equipo, $canales, $nombre_plantilla, (int)$user['id']);
     }
 
     $pdo->commit();

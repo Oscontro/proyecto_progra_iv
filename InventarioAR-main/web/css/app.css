@@ -561,3 +561,17 @@ th[aria-sort="descending"] .th-orden::after { content: ' ▼'; opacity: 1; }
 .tabla-canales { max-height: 50vh; margin: 0.75rem 0; }
 .tabla-canales input[type="text"], .tabla-canales select { width: 100%; min-width: 0; min-height: 34px; margin: 0; }
 .tabla-canales th[scope="row"] { width: 4rem; text-align: center; background: transparent; color: var(--texto); position: static; }
+
+/* Ingreso de equipos */
+.ingreso-columnas { display: grid; grid-template-columns: minmax(0, 2fr) minmax(240px, 1fr); gap: 1rem; align-items: start; }
+@media (max-width: 860px) { .ingreso-columnas { grid-template-columns: 1fr; } }
+.panel-ingreso { padding: 1rem 1.2rem; border: 1px solid var(--borde); border-radius: var(--radio); background: var(--superficie); }
+.panel-imagen { text-align: center; }
+.panel-imagen h3 { margin: 0 0 0.75rem; font-size: 1rem; }
+.imagen-modelo { max-width: 100%; max-height: 320px; object-fit: contain; }
+.sin-imagen { padding: 3rem 1rem; border: 2px dashed var(--borde); border-radius: var(--radio); color: var(--tinta-tenue); font-weight: bold; }
+.mayusculas { text-transform: uppercase; }
+.campo-serie { font-weight: bold; }
+.resultado-lista { color: var(--azul-oscuro); }
+.resultado-guardada { color: #1b5e20; font-weight: bold; }
+.resultado-error { color: var(--rojo-oscuro); font-weight: bold; }
