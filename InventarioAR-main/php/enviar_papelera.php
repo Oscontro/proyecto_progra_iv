@@ -11,12 +11,10 @@ try {
     $datos = getJsonInput();
     if (!$datos) {
         sendError("No se recibieron datos", 400);
-        exit;
     }
 
-    $id_equipo    = $datos['id_equipo'] ?? null;
-    $motivo       = $datos['motivo'] ?? null;
-    $numero_serie = $datos['numero_serie'] ?? null;
+    $id_equipo = filter_var($datos['id_equipo'] ?? null, FILTER_VALIDATE_INT);
+    $motivo    = trim((string)($datos['motivo'] ?? ''));
 
     if (!$id_equipo) {
         sendError("Falta el id del equipo", 400);
@@ -24,13 +22,30 @@ try {
 
     $pdo = getConnection();
     $pdo->setAttribute(PDO::ATTR_EMULATE_PREPARES, true);
+
+    // Solo se envía a la papelera un equipo del inventario activo. El número
+    // de serie que queda registrado sale de la base, no del cliente.
+    $stmt = $pdo->prepare("SELECT numero_serie, en_papelera, en_taller FROM equipos WHERE id_equipo = ?");
+    $stmt->execute([$id_equipo]);
+    $equipo = $stmt->fetch(PDO::FETCH_ASSOC);
+    if (!$equipo) {
+        sendError("No se encontró el equipo", 404);
+    }
+    if ($equipo['en_papelera']) {
+        sendError("El equipo ya está en la papelera", 409);
+    }
+    if ($equipo['en_taller']) {
+        sendError("El equipo está en taller: no se puede enviar a la papelera", 409);
+    }
+    $numero_serie = $equipo['numero_serie'];
+
     $pdo->prepare("SET @usuario_actual = ?")->execute([$user['id']]);
 
     $pdo->beginTransaction();
 
     // El usuario sale del token, no del cliente.
     $stmt = $pdo->prepare("CALL sp_enviar_a_papelera(?, ?, ?, ?)");
-    $stmt->execute([$id_equipo, $user['id'], $motivo, $numero_serie]);
+    $stmt->execute([$id_equipo, $user['id'], $motivo === '' ? null : $motivo, $numero_serie]);
     $stmt->closeCursor();   // libera el cursor del SP antes de confirmar
 
     $pdo->commit();
@@ -48,5 +63,5 @@ try {
            . " | " . $e->getMessage();
     @file_put_contents($archivo_log, $linea . PHP_EOL, FILE_APPEND);
 
-    sendError("No se pudo enviar el equipo a la papelera. Intente nuevamente.", 500);
+    sendError(API_DEBUG ? $e->getMessage() : "No se pudo enviar el equipo a la papelera. Intente nuevamente.", 500);
 }

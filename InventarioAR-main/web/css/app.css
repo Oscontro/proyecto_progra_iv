@@ -548,3 +548,16 @@ th[aria-sort="descending"] .th-orden::after { content: ' ▼'; opacity: 1; }
 .repuesto-egreso label { margin: 0; font-weight: normal; }
 .repuesto-egreso small { color: var(--tinta-tenue); }
 .repuesto-egreso input[type="number"] { min-height: 34px; }
+
+/* Inventario: edición, papelera y reparación */
+.btn-advertencia { background: #e65100; color: #fff; }
+.btn-advertencia:hover:not(:disabled) { background: #bf360c; }
+.rejilla-form { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 0 1rem; }
+.rejilla-form select, .rejilla-form input { width: 100%; }
+.rejilla-form input[readonly] { background: #eceff1; color: var(--tinta-tenue); font-weight: bold; }
+.fila-programacion { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
+
+/* Programación de canales */
+.tabla-canales { max-height: 50vh; margin: 0.75rem 0; }
+.tabla-canales input[type="text"], .tabla-canales select { width: 100%; min-width: 0; min-height: 34px; margin: 0; }
+.tabla-canales th[scope="row"] { width: 4rem; text-align: center; background: transparent; color: var(--texto); position: static; }

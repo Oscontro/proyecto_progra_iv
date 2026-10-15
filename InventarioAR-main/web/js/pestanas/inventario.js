@@ -1,15 +1,16 @@
-// Pestaña Inventario - consulta (equivalente de solo lectura de tabs/tab_inventario.py).
+// Pestaña Inventario (equivalente a tabs/tab_inventario.py).
 //
 // Incluye: búsqueda por N° de serie, filtros (tipo -> marca -> modelo en
 // cascada, escala, sector, estado), tabla ordenable, historial del equipo,
-// copiar fila y exportación a Excel de lo filtrado.
-// Pendiente para una etapa posterior: editar, enviar a papelera y a reparación.
+// copiar fila, exportación a Excel de lo filtrado, edición del equipo (con
+// su programación de canales), envío a papelera y envío a reparación (taller).
 
 import { ApiError, SesionExpirada, ClavePendiente } from '../api.js';
-import { el, aviso, textoCelda, campoSelect, llenarSelect } from '../ui.js';
+import { el, aviso, textoCelda, campoSelect, llenarSelect, dialogoFormulario } from '../ui.js';
 import { exportarExcel, fechaArchivo } from '../excel.js';
 import { tablaSeleccionable } from '../tabla_seleccionable.js';
 import { verHistorialEquipo } from '../historial.js';
+import { editarProgramacion, resumenProgramacion } from '../programacion.js';
 
 // Columnas visibles (el escritorio oculta potencia y nombre de plantilla).
 const COLUMNAS = [
@@ -48,14 +49,18 @@ export function montar(contenedor, { api }) {
     const btnHistorial = el('button', { type: 'button', class: 'btn btn-primario', disabled: true, onclick: () => verHistorial() }, '📜 Ver historial');
     const btnCopiar = el('button', { type: 'button', class: 'btn btn-secundario', disabled: true, onclick: copiarFila }, '📋 Copiar fila');
     const btnExcel = el('button', { type: 'button', class: 'btn btn-exito', onclick: generarExcel }, '📊 Generar Excel');
+    const btnEditar = el('button', { type: 'button', class: 'btn btn-primario', disabled: true, onclick: editar }, '📝 Editar');
+    const btnPapelera = el('button', { type: 'button', class: 'btn btn-peligro boton-derecha', disabled: true, onclick: enviarAPapelera }, '🗑️ Enviar a papelera');
+    const btnReparacion = el('button', { type: 'button', class: 'btn btn-advertencia', disabled: true, onclick: enviarAReparacion }, '🔧 Enviar a reparación');
 
     const tabla = tablaSeleccionable({
         columnas: COLUMNAS,
         etiqueta: 'Equipos del inventario',
         unidad: 'equipos',
         alSeleccionar: (fila) => {
-            btnHistorial.disabled = !fila;
-            btnCopiar.disabled = !fila;
+            for (const boton of [btnEditar, btnHistorial, btnCopiar, btnPapelera, btnReparacion]) {
+                boton.disabled = !fila;
+            }
         },
         alActivar: verHistorial,
     });
@@ -70,9 +75,7 @@ export function montar(contenedor, { api }) {
         tabla.contador,
         tabla.nodo,
         el('div', { class: 'acciones-pie' },
-            btnHistorial, btnCopiar, btnExcel,
-            el('p', { class: 'texto-suave nota' },
-                'Editar, enviar a papelera y enviar a reparación: por ahora desde el cliente de escritorio.')));
+            btnEditar, btnHistorial, btnCopiar, btnExcel, btnPapelera, btnReparacion));
 
     buscar.addEventListener('input', aplicarFiltros);
 
@@ -215,6 +218,263 @@ export function montar(contenedor, { api }) {
         } finally {
             btnExcel.disabled = !filtrados.length;
         }
+    }
+
+    // ── Editar ──
+    async function editar() {
+        const equipo = tabla.seleccionada;
+        if (!equipo) return;
+        btnEditar.disabled = true;
+        let catalogos;
+        try {
+            const [escalas, sectores, estados, potencias, programacion] = await Promise.all([
+                api.get('escalas.php'),
+                api.get('sectores.php'),
+                api.get('estados.php'),
+                api.get('potencias.php'),
+                api.get('cargar_programacion.php', { id_equipo: equipo.id_equipo }),
+            ]);
+            catalogos = { escalas, sectores, estados, potencias, programacion };
+        } catch (error) {
+            manejarError(error, 'No se pudieron cargar los datos del equipo');
+            return;
+        } finally {
+            btnEditar.disabled = !tabla.seleccionada;
+        }
+        abrirEdicion(equipo, catalogos);
+    }
+
+    function abrirEdicion(equipo, { escalas, sectores, estados, potencias, programacion }) {
+        // null = no se tocó la programación: se conserva la que tiene el equipo.
+        let programacionNueva = null;
+        let marcasTipo = [];   // marcas del tipo elegido en el formulario
+
+        const selTipo = el('select', { id: 'ed-tipo', required: true });
+        const selMarca = el('select', { id: 'ed-marca', required: true });
+        const selModelo = el('select', { id: 'ed-modelo', required: true });
+        const serie = el('input', { type: 'text', id: 'ed-serie', value: equipo.numero_serie, readonly: true });
+        const selEscala = el('select', { id: 'ed-escala', required: true });
+        // Sector y estado son texto libre en la base: se sugieren los existentes.
+        const sector = el('input', { type: 'text', id: 'ed-sector', list: 'ed-sectores', maxlength: 100, autocomplete: 'off', required: true });
+        const estadoEq = el('input', { type: 'text', id: 'ed-estado', list: 'ed-estados', maxlength: 100, autocomplete: 'off', required: true });
+        const selPotencia = el('select', { id: 'ed-potencia' });
+        const observaciones = el('textarea', { id: 'ed-observaciones', maxlength: 255, placeholder: 'Observaciones adicionales…' });
+        const resumenProg = el('span', { class: 'texto-suave' }, resumenProgramacion(programacion));
+        const btnProg = el('button', { type: 'button', class: 'btn btn-secundario', onclick: configurarCanales }, '⚙️ Configurar canales');
+
+        llenarSelect(selEscala, conActual(escalas.map((e) => e.escala), equipo.escala));
+        llenarSelect(selPotencia, [{ valor: '', texto: 'Sin especificar' }, ...conActual(potencias.map((p) => p.potencia), equipo.potencia)]);
+        selEscala.value = equipo.escala;
+        selPotencia.value = equipo.potencia ?? '';
+        sector.value = equipo.sector ?? '';
+        estadoEq.value = equipo.estado ?? '';
+        observaciones.value = equipo.ult_observacion ?? '';
+
+        const campo = (control, etiqueta) => el('div', { class: 'campo' }, el('label', { for: control.id }, etiqueta), control);
+
+        dialogoFormulario(`Modificar equipo · ${equipo.numero_serie}`, [
+            el('div', { class: 'rejilla-form' },
+                campo(selTipo, 'Tipo'), campo(selMarca, 'Marca'), campo(selModelo, 'Modelo'),
+                campo(serie, 'N° de serie'), campo(selEscala, 'Escala'), campo(selPotencia, 'Potencia'),
+                campo(sector, 'Sector'), campo(estadoEq, 'Estado')),
+            el('datalist', { id: 'ed-sectores' }, sectores.map((s) => el('option', { value: s.sector }))),
+            el('datalist', { id: 'ed-estados' }, estados.map((e) => el('option', { value: e.estado }))),
+            el('label', {}, 'Programación'),
+            el('div', { class: 'fila-programacion' }, btnProg, resumenProg),
+            el('label', { for: observaciones.id }, 'Observaciones'),
+            observaciones,
+        ], {
+            textoAceptar: '💾 Modificar equipo',
+            ancho: 'medio',
+            alAceptar: guardar,
+        });
+
+        selTipo.addEventListener('change', () => cascadaMarcas());
+        selMarca.addEventListener('change', () => cascadaModelos());
+        cascadaInicial();
+
+        async function cascadaInicial() {
+            llenarSelect(selTipo, conActual(tipos.map((t) => t.tipo), equipo.tipo));
+            selTipo.value = equipo.tipo;
+            await cascadaMarcas(equipo.marca, equipo.modelo_equipo);
+        }
+
+        async function cascadaMarcas(marcaElegida = null, modeloElegido = null) {
+            llenarSelect(selMarca, [{ valor: '', texto: 'Cargando…' }]);
+            llenarSelect(selModelo, [{ valor: '', texto: 'Primero seleccione la marca' }]);
+            selMarca.disabled = selModelo.disabled = true;
+            const tipo = tipos.find((t) => t.tipo === selTipo.value);
+            if (!tipo) return;
+            try {
+                marcasTipo = await api.get('marcas.php', { id_tipo: tipo.id_tipo });
+            } catch (error) {
+                manejarError(error, 'No se pudieron cargar las marcas');
+                return;
+            }
+            llenarSelect(selMarca, [{ valor: '', texto: 'Seleccione la marca' }, ...marcasTipo.map((m) => m.marca)]);
+            selMarca.disabled = false;
+            if (marcaElegida && marcasTipo.some((m) => m.marca === marcaElegida)) {
+                selMarca.value = marcaElegida;
+                await cascadaModelos(modeloElegido);
+            }
+        }
+
+        async function cascadaModelos(modeloElegido = null) {
+            llenarSelect(selModelo, [{ valor: '', texto: 'Primero seleccione la marca' }]);
+            selModelo.disabled = true;
+            const tipo = tipos.find((t) => t.tipo === selTipo.value);
+            const marca = marcasTipo.find((m) => m.marca === selMarca.value);
+            if (!tipo || !marca) return;
+            let modelos;
+            try {
+                modelos = await api.get('modelos.php', { id_marca: marca.id_marca, id_tipo: tipo.id_tipo });
+            } catch (error) {
+                manejarError(error, 'No se pudieron cargar los modelos');
+                return;
+            }
+            if (!modelos.length) {
+                llenarSelect(selModelo, [{ valor: '', texto: 'Sin modelos para esta marca y tipo' }]);
+                return;
+            }
+            llenarSelect(selModelo, [{ valor: '', texto: 'Seleccione el modelo' }, ...modelos.map((m) => m.modelo_equipo)]);
+            selModelo.disabled = false;
+            if (modeloElegido && modelos.some((m) => m.modelo_equipo === modeloElegido)) {
+                selModelo.value = modeloElegido;
+            }
+        }
+
+        async function configurarCanales() {
+            const prog = await editarProgramacion(api, programacionNueva ?? programacion);
+            if (prog) {
+                programacionNueva = prog;
+                resumenProg.textContent = `${resumenProgramacion(prog)} · se guarda al modificar el equipo`;
+            }
+        }
+
+        async function guardar() {
+            const faltantes = [[selTipo, 'el tipo'], [selMarca, 'la marca'], [selModelo, 'el modelo'],
+                [selEscala, 'la escala'], [sector, 'el sector'], [estadoEq, 'el estado']]
+                .filter(([control]) => !control.value.trim());
+            if (faltantes.length) {
+                aviso(`Falta completar ${faltantes.map(([, nombre]) => nombre).join(', ')}.`, 'error');
+                faltantes[0][0].focus();
+                return false;
+            }
+            try {
+                const respuesta = await api.post('modiEquipo.php', {
+                    equipo: {
+                        id_equipo: equipo.id_equipo,
+                        numero_serie: equipo.numero_serie,
+                        tipo: selTipo.value,
+                        marca: selMarca.value,
+                        modelo_equipo: selModelo.value,
+                        escala: selEscala.value,
+                        sector: sector.value.trim(),
+                        estado: estadoEq.value.trim(),
+                        valor_potencia: selPotencia.value,
+                        observaciones: observaciones.value.trim(),
+                    },
+                    frecuencias: programacionNueva ?? { cantidad_canales: 0, canales: [] },
+                });
+                aviso(respuesta?.cambios === false
+                    ? 'No hubo cambios que aplicar.'
+                    : `Equipo ${equipo.numero_serie} modificado correctamente.`, respuesta?.cambios === false ? 'info' : 'exito');
+            } catch (error) {
+                manejarError(error, 'No se pudo modificar el equipo');
+                return false;
+            }
+            cargar();
+            return true;
+        }
+    }
+
+    /** Opciones del catálogo más el valor actual del equipo si no figura (para no perderlo). */
+    function conActual(valores, actual) {
+        return actual && !valores.includes(actual) ? [actual, ...valores] : valores;
+    }
+
+    // ── Enviar a papelera ──
+    function enviarAPapelera() {
+        const equipo = tabla.seleccionada;
+        if (!equipo) return;
+        const motivo = el('textarea', { id: 'pap-motivo', maxlength: 500, placeholder: 'Motivo de la baja…' });
+        const { form } = dialogoFormulario('Enviar a papelera', [
+            fichaEquipo(equipo),
+            el('p', {}, '¿Enviar este equipo a la papelera? Se podrá restaurar desde la pestaña Papelera.'),
+            el('label', { for: motivo.id }, 'Motivo'),
+            motivo,
+        ], {
+            textoAceptar: '🗑️ Enviar a papelera',
+            ancho: 'medio',
+            alAceptar: async () => {
+                try {
+                    await api.post('enviar_papelera.php', { id_equipo: equipo.id_equipo, motivo: motivo.value.trim() });
+                } catch (error) {
+                    manejarError(error, 'No se pudo enviar a la papelera');
+                    return false;
+                }
+                aviso(`Equipo ${equipo.numero_serie} enviado a la papelera.`, 'exito');
+                cargar();
+                return true;
+            },
+        });
+        form.querySelector('[type="submit"]').className = 'btn btn-peligro';
+        motivo.focus();
+    }
+
+    // ── Enviar a reparación (taller) ──
+    async function enviarAReparacion() {
+        const equipo = tabla.seleccionada;
+        if (!equipo) return;
+        let talleres;
+        try {
+            talleres = await api.get('talleres.php');
+        } catch (error) {
+            manejarError(error, 'No se pudieron cargar los talleres');
+            return;
+        }
+        if (!talleres.length) {
+            aviso('No hay talleres cargados.', 'error');
+            return;
+        }
+        const selTaller = el('select', { id: 'rep-taller' });
+        llenarSelect(selTaller, talleres.map((t) => ({ valor: t.id_taller, texto: t.taller })));
+        const motivo = el('textarea', { id: 'rep-motivo', maxlength: 500, placeholder: 'Falla o motivo del envío…' });
+        dialogoFormulario('Enviar a reparación', [
+            fichaEquipo(equipo),
+            el('label', { for: selTaller.id }, 'Taller'),
+            selTaller,
+            el('label', { for: motivo.id }, 'Observaciones'),
+            motivo,
+            el('p', { class: 'texto-suave' }, 'El equipo sale del inventario y aparece en Taller como "No ingresado" hasta que el taller lo reciba.'),
+        ], {
+            textoAceptar: '🔧 Enviar a taller',
+            ancho: 'medio',
+            alAceptar: async () => {
+                try {
+                    await api.post('enviar_a_taller.php', {
+                        id_equipo: equipo.id_equipo,
+                        id_taller: Number(selTaller.value),
+                        observaciones: motivo.value.trim(),
+                    });
+                } catch (error) {
+                    manejarError(error, 'No se pudo enviar a taller');
+                    return false;
+                }
+                const taller = selTaller.selectedOptions[0]?.textContent ?? '';
+                aviso(`Equipo ${equipo.numero_serie} enviado a ${taller}.`, 'exito');
+                cargar();
+                return true;
+            },
+        });
+        motivo.focus();
+    }
+
+    function fichaEquipo(equipo) {
+        const dato = (t, v) => el('div', { class: 'ficha-par' }, el('dt', {}, t), el('dd', {}, textoCelda(v) || '-'));
+        return el('dl', { class: 'ficha' },
+            dato('Tipo:', equipo.tipo), dato('Marca:', equipo.marca), dato('Modelo:', equipo.modelo_equipo),
+            dato('N° de serie:', equipo.numero_serie), dato('Sector:', equipo.sector), dato('Estado:', equipo.estado));
     }
 
     function manejarError(error, contexto) {
