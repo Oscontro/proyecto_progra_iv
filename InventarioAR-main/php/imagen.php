@@ -22,10 +22,10 @@ try {
     if ($ruta_imagen) {
         sendSuccess($ruta_imagen) ;
     } else {
-        sendError("No se encontró la imagen") ;
+        sendError("No se encontró la imagen", 404);
     }
 
 } catch(PDOException $e) {
-    echo "Error: " . $e->getMessage();
+    sendError(API_DEBUG ? $e->getMessage() : "Error al obtener la imagen");
 }
 ?>

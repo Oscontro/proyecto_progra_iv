@@ -19,7 +19,7 @@ try {
                 COALESCE(sector, '') as sector, 
                 COALESCE(MAX(fecha_eliminacion), '') as fecha_eliminacion
             FROM vista_papelera_unificada
-            GROUP BY id_referencia
+            GROUP BY origen, id_referencia
             ORDER BY fecha_eliminacion DESC";
             
     $stmt = $pdo->prepare($sql);
@@ -31,7 +31,6 @@ try {
     echo json_encode($datos, JSON_UNESCAPED_UNICODE);
     
 } catch(PDOException $e) {
-    http_response_code(500);
-    sendError("Error al obtener el historial de eliminaciones: " . $e->getMessage(), 500);
+    sendError(API_DEBUG ? $e->getMessage() : "Error al obtener la papelera", 500);
 }
 ?>

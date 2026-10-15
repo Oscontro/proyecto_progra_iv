@@ -22,8 +22,9 @@ try {
                 hv.valor_nuevo,
                 observaciones
             FROM historial_vehiculos hv
+            JOIN vehiculos v ON v.id_vehiculo = hv.id_vehiculo
             LEFT JOIN usuarios u ON hv.usuario_evento = u.id_usuario
-            WHERE (SELECT id_vehiculo FROM vehiculos WHERE identificacion = :identificacion) = hv.id_vehiculo
+            WHERE v.identificacion = :identificacion
             ORDER BY hv.fecha_evento DESC";
 
     
@@ -38,7 +39,6 @@ try {
     echo json_encode(["success" => true, "message" => "Consulta de historial existosa", "data" => $resultado]);
 } catch(PDOException $e) {
     $error = date('Y-m-d H:i:s') . " | EXCEPCION | " . ($identificacion ?? 'N/A') . " | " . $e->getMessage();
-    file_put_contents($archivo_log, $error . PHP_EOL, FILE_APPEND);
-    echo json_encode(["success" => false, "message" => "Error: " . $e->getMessage()]);
-    exit;
+    @file_put_contents($archivo_log, $error . PHP_EOL, FILE_APPEND);
+    sendError(API_DEBUG ? $e->getMessage() : "Error al obtener el historial del vehículo", 500);
 }

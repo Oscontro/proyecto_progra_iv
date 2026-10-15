@@ -135,6 +135,7 @@ class ApiClient:
             data = self.get("me.php")
             self.usuario = data["username"]
             self.es_admin = bool(data.get("es_admin", False))
+            self.debe_cambiar_clave = bool(data.get("debe_cambiar_clave", False))
             return True
         except (ApiError, SesionExpirada):
             return False

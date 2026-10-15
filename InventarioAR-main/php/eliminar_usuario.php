@@ -1,35 +1,36 @@
 <?php
-date_default_timezone_set("America/Argentina/Buenos_Aires");
-require_once 'auth.php';    // trae conexion.php y config.php; requireAuth y getJsonInput
+// Elimina un usuario. Si tiene registros que lo referencian (por ejemplo
+// recepciones de taller) la base lo impide: se responde 409 sugiriendo
+// desactivarlo, en lugar de un error genérico.
+require_once 'usuarios_comun.php';
 $user = requireAdmin();
-
-$archivo_log = __DIR__ . '/logs/errores_importacion.log';
 
 $legajo = null;
 
-try{
+try {
     $datos = getJsonInput();
-
     if (!$datos) {
         sendError("No se recibieron datos", 400);
-        exit;
     }
-
-    $legajo     = $datos["legajo"] ?? null;
+    $legajo = $datos['legajo'] ?? null;
 
     $pdo = getConnection();
-    $pdo->setAttribute(PDO::ATTR_EMULATE_PREPARES, true);
+    $actual = usuarioPorLegajo($pdo, $legajo);
+    controlarAccesoAdmin($pdo, $actual, $user, false, 'eliminar');
+
     $pdo->prepare("SET @usuario_actual = ?")->execute([$user['id']]);
+    try {
+        $pdo->prepare("DELETE FROM usuarios WHERE id_usuario = ?")->execute([$actual['id_usuario']]);
+    } catch (PDOException $e) {
+        if (($e->errorInfo[1] ?? null) === 1451) {   // fila referenciada por una clave foránea
+            sendError("El usuario tiene registros asociados (taller, observaciones…) y no se puede eliminar. Desactivalo en su lugar.", 409);
+        }
+        throw $e;
+    }
 
-    $stmt_eliminar_usuario = $pdo->prepare("DELETE FROM usuarios WHERE legajo = ?");
-    $stmt_eliminar_usuario->execute([$legajo]);
+    sendSuccess(['legajo' => $actual['legajo']], "Usuario eliminado.");
 
-    sendSuccess("Usuario eliminado exitosamente.", 200);
-
-} catch (PDOException $e) {
-    $linea = date('Y-m-d H:i:s') . " | usuario=" . $user['id']
-           . " | eliminar_usuario | legajo =" . ($legajo ?? 'N/A')
-           . " | " . $e->getMessage();
-    @file_put_contents($archivo_log, $linea . PHP_EOL, FILE_APPEND);
-    sendError("Error al eliminar el usuario.", 500);
+} catch (Throwable $e) {
+    registrarError('eliminar_usuario', $user, "legajo=" . ($legajo ?? 'N/A') . " | " . $e->getMessage());
+    sendError(API_DEBUG ? $e->getMessage() : "Error al eliminar el usuario.", 500);
 }

@@ -5,7 +5,7 @@ $user = requireAuth();
 try {
     $pdo = getConnection();
     
-    $sql = "SELECT DISTINCT nombre_plantilla FROM programacion_canales WHERE nombre_plantilla IS NOT NULL ORDER BY nombre_plantilla ASC";
+    $sql = "SELECT DISTINCT nombre_plantilla FROM programacion_canales WHERE nombre_plantilla IS NOT NULL AND nombre_plantilla <> '' ORDER BY nombre_plantilla ASC";
     $stmt = $pdo->query($sql);
     $nombre_config = $stmt->fetchAll(PDO::FETCH_ASSOC);
     

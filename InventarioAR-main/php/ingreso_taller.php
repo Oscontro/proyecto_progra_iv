@@ -47,11 +47,33 @@ try {
     ];
 
     $elementos_convertidos = [];
-    foreach ($elementos as $nombre_columna) {
+    foreach ((array)$elementos as $nombre_columna) {
         if (in_array($nombre_columna, $columnas_permitidas, true)) {
             $elementos_convertidos[$nombre_columna] = 1;
         }
         // Cualquier nombre fuera de la lista se ignora en silencio.
+    }
+
+    // ── Validaciones (antes solo las hacía el cliente) ──
+    if (!$id_equipo || !$id_estado || !$id_taller) {
+        sendError("Faltan datos del equipo", 400);
+    }
+    if (!$elementos_convertidos) {
+        sendError("Debe seleccionar al menos un elemento", 400);
+    }
+    // Solo se ingresa un equipo enviado a taller que todavía figure como
+    // "No ingresado" (7). Evita registrar dos ingresos del mismo equipo.
+    $stmt = $pdo->prepare(
+        "SELECT ee.id_estado, e.en_taller
+           FROM equipo_estado ee JOIN equipos e ON e.id_equipo = ee.id_equipo
+          WHERE ee.id = ? AND ee.id_equipo = ?");
+    $stmt->execute([$id_estado, $id_equipo]);
+    $actual = $stmt->fetch();
+    if (!$actual || !$actual['en_taller']) {
+        sendError("El equipo no está enviado a taller", 409);
+    }
+    if ((int)$actual['id_estado'] !== 7) {
+        sendError("El equipo ya fue ingresado al taller", 409);
     }
 
     // Armar el registro. Estas claves fijas más las validadas de arriba.
@@ -92,9 +114,7 @@ try {
     $linea = date('Y-m-d H:i:s') . " | usuario=" . $user['id']
            . " | ingreso_taller | id_equipo=" . ($id_equipo ?? 'N/A')
            . " | " . $e->getMessage();
-    @file_put_contents($archivo_log, $linea . PHP_EOL, FILE_APPEND);
-    // DEBUG temporal — sacar cuando esté estable:
-    @file_put_contents($archivo_log, "DEBUG: " . json_encode($registro) . PHP_EOL, FILE_APPEND);
+    @file_put_contents($archivo_log, $linea . " | datos=" . json_encode($registro) . PHP_EOL, FILE_APPEND);
 
-    sendError("DEBUG: " . $e->getMessage(), 500);
+    sendError(API_DEBUG ? $e->getMessage() : "No se pudo registrar el ingreso a taller", 500);
 }

@@ -1,44 +1,36 @@
 <?php
-date_default_timezone_set("America/Argentina/Buenos_Aires");
-require_once 'auth.php';    // trae conexion.php y config.php; requireAuth y getJsonInput
+// Activa o desactiva un usuario. "activo" es el estado NUEVO (true/false;
+// también se acepta "activar"/"desactivar").
+require_once 'usuarios_comun.php';
 $user = requireAdmin();
 
-$archivo_log = __DIR__ . '/logs/errores_importacion.log';
-
 $legajo = null;
-$activo = null;
 
-try{
+try {
     $datos = getJsonInput();
-
-    if (!$datos) {
-        sendError("No se recibieron datos", 400);
-        exit;
+    if (!$datos || !array_key_exists('activo', $datos)) {
+        sendError("Faltan datos", 400);
     }
-
-    $legajo     = $datos["legajo"] ?? null;
-    $activo     = $datos["activo"] ?? null;
-
-    if($activo == "activar"){
-        $usuario_activo = 1;
-    }
-    else{
-        $usuario_activo = 0;
-    }
+    $legajo = $datos['legajo'] ?? null;
+    $activo = leerBooleano($datos['activo']);
 
     $pdo = getConnection();
-    $pdo->setAttribute(PDO::ATTR_EMULATE_PREPARES, true);
+    $actual = usuarioPorLegajo($pdo, $legajo);
+    // Activar nunca quita acceso; desactivar a un administrador sí.
+    controlarAccesoAdmin($pdo, $actual, $user, $activo === 1 || !$actual['es_administrador'], 'desactivar');
+    if (!$activo && (int)$actual['id_usuario'] === (int)$user['id']) {
+        sendError("No podés desactivar tu propio usuario", 409);
+    }
+
     $pdo->prepare("SET @usuario_actual = ?")->execute([$user['id']]);
+    $pdo->prepare("UPDATE usuarios SET activo = ? WHERE id_usuario = ?")->execute([$activo, $actual['id_usuario']]);
+    if (!$activo) {
+        cerrarSesiones($pdo, (int)$actual['id_usuario']);
+    }
 
-    $stmt_toggle_activo = $pdo->prepare("UPDATE usuarios SET activo = ? WHERE legajo = ?");
-    $stmt_toggle_activo->execute([$usuario_activo, $legajo]);
+    sendSuccess(['activo' => (bool)$activo], $activo ? "Usuario activado." : "Usuario desactivado.");
 
-    sendSuccess("Estado del usuario actualizado exitosamente.", 200);
-    
-} catch (PDOException $e) {
-    $linea = date('Y-m-d H:i:s') . " | usuario=" . $user['id']
-           . " | crear_usuario | username =" . ($username ?? 'N/A')
-           . " | " . $e->getMessage();
-    @file_put_contents($archivo_log, $linea . PHP_EOL, FILE_APPEND);
-    sendError("Error al actualizar el estado del usuario.", 500);
+} catch (Throwable $e) {
+    registrarError('toggle_activo', $user, "legajo=" . ($legajo ?? 'N/A') . " | " . $e->getMessage());
+    sendError(API_DEBUG ? $e->getMessage() : "Error al actualizar el estado del usuario.", 500);
 }

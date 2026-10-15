@@ -27,12 +27,8 @@ from tabs.tab_ingreso_equipos import IngresoEquiposTab
 from tabs.tab_inventario import InventarioTab
 from tabs.tab_taller import TallerTab
 from tabs.tab_repuestos import StockRepuestosTab
-from tabs.tab_vehiculos import VehiculosTab
-from tabs.tab_etiquetas import EtiquetasTab
 from tabs.tab_papelera import PapeleraTab
 from tabs.tab_estadisticas import EstadisticasTab
-from tabs.tab_ultimos_movimientos import UltimosMovimientosTab
-from tabs.tab_configuracion import ConfiguracionTab
 from tabs.tab_administracion import AdministracionTab
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -635,11 +631,8 @@ class VentanaPrincipal(QMainWindow):
         self.inventario_tab  = InventarioTab(self.api)
         self.taller_tab      = TallerTab(self.api)
         self.repuestos_tab   = StockRepuestosTab(self.api)
-        self.vehiculos_tab   = VehiculosTab(self.api)
-        self.etiquetas_tab   = EtiquetasTab(self.api)
         self.papelera_tab    = PapeleraTab(self.api, self.es_administrador)
         self.estadisticas_tab = EstadisticasTab(self.api)
-        self.ultimos_mov_tab = UltimosMovimientosTab(self.api)
 
         # Pasar la referencia de papelera a inventario
         self.inventario_tab.set_papelera_tab(self.papelera_tab)
@@ -648,16 +641,10 @@ class VentanaPrincipal(QMainWindow):
         self.tabs.addTab(self.inventario_tab,  "📦 Inventario")
         self.tabs.addTab(self.taller_tab,      "🛠️ Taller")
         self.tabs.addTab(self.repuestos_tab,   "🔩 Repuestos" )
-        self.tabs.addTab(self.vehiculos_tab,   "🚌 Vehículos")
-        self.tabs.addTab(self.etiquetas_tab,   "🎫 Etiquetas")
         self.tabs.addTab(self.papelera_tab,    "🗑️ Papelera")
         self.tabs.addTab(self.estadisticas_tab, "📊 Estadísticas")
-        self.tabs.addTab(self.ultimos_mov_tab, "📅 Últimos Movimientos")
-        
-        
 
         if self.es_administrador:
-            self.tabs.addTab(ConfiguracionTab(), "⚙️ Configuración")
             self.tabs.addTab(AdministracionTab(self.api), "👤 Administración")
             
         self.tabs.currentChanged.connect(self.on_tab_changed)
@@ -768,9 +755,8 @@ class VentanaPrincipal(QMainWindow):
             widget_actual = self.tabs.widget(index)
     
             for metodo in ('obtener_datos_iniciales', 
-                           'obtener_datos', 
-                           'cargar_datos', 
-                           'get_internos', 
+                           'obtener_datos',
+                           'cargar_datos',
                            'obtener_usuarios',
                            'cargar_resumen'):
                 if hasattr(widget_actual, metodo):
@@ -807,24 +793,24 @@ def main():
         QMessageBox QPushButton:hover { background-color: #005999; }
     """)
 
-    # Si quedó un token válido de la vez anterior, entramos directo.
+    # Si quedó un token válido de la vez anterior, entramos directo
+    # (salvo que la cuenta tenga pendiente el cambio de clave).
     if api.verificar_sesion():
+        if api.debe_cambiar_clave:
+            cambio = DialogoCambiarClave(api, obligatorio=True)
+            if cambio.exec() != QDialog.DialogCode.Accepted:
+                sys.exit(0)
         ventana = VentanaPrincipal(api, api.usuario, api.es_admin)
         ventana.show()
         sys.exit(app.exec())
 
     dialogo_login = DialogoLogin(api)
     if dialogo_login.exec() == QDialog.DialogCode.Accepted:
+        # Si no completó el cambio de clave obligatorio, no entra.
         ventana = abrir_sesion(api, dialogo_login)
         if ventana is not None:
             ventana.show()
             sys.exit(app.exec())
-
-        ventana = VentanaPrincipal(api,
-                                   dialogo_login.usuario_autenticado,
-                                   dialogo_login.es_administrador)
-        ventana.show()
-        sys.exit(app.exec())
         
     
 

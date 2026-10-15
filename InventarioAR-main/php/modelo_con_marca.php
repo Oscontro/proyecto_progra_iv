@@ -21,5 +21,5 @@ try {
 } catch (Throwable $e) {
     $linea = date('Y-m-d H:i:s') . " | modelos_con_marca | " . $e->getMessage();
     @file_put_contents($archivo_log, $linea . PHP_EOL, FILE_APPEND);
-    sendError("DEBUG: " . $e->getMessage(), 500);
+    sendError(API_DEBUG ? $e->getMessage() : "Error al obtener los modelos", 500);
 }

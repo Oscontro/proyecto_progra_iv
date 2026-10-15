@@ -1,0 +1,15 @@
+# Python
+__pycache__/
+*.pyc
+
+# Logs de la API (se generan en ejecución)
+InventarioAR-main/php/logs/*.log
+
+# Configuración local con credenciales (ver config.local.example.php)
+InventarioAR-main/php/config.local.php
+
+# Dumps de la base (contienen datos y hashes de contraseñas).
+# Solo se versiona el esquema sin datos.
+*.sql
+!InventarioAR-main/db/schema.sql
+!InventarioAR-main/db/migraciones/*.sql

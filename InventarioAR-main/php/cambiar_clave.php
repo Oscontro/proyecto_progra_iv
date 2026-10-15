@@ -1,6 +1,6 @@
 <?php
 require_once 'auth.php';
-$user = requireAuth();   // el usuario ya se logueó (con su clave temporal o la actual)
+$user = requireAuth(true);   // el usuario ya se logueó (con su clave temporal o la actual)
 
 $archivo_log = __DIR__ . '/logs/errores_importacion.log';
 

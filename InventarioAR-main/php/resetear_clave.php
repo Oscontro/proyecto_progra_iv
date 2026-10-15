@@ -1,39 +1,37 @@
 <?php
-date_default_timezone_set("America/Argentina/Buenos_Aires");
-require_once 'auth.php';    // trae conexion.php y config.php; requireAuth y getJsonInput
+// Resetea la clave de un usuario a una temporal aleatoria (se devuelve UNA
+// vez en "clave_temporal"), obliga a cambiarla, quita el bloqueo por
+// intentos fallidos y cierra sus sesiones abiertas.
+require_once 'usuarios_comun.php';
 $user = requireAdmin();
-
-$archivo_log = __DIR__ . '/logs/errores_importacion.log';
 
 $legajo = null;
 
-try{
+try {
     $datos = getJsonInput();
-
     if (!$datos) {
         sendError("No se recibieron datos", 400);
-        exit;
     }
-
-    $legajo     = $datos["legajo"] ?? null;
-
-    $clave_generica = '1234';
-    $password_hash = password_hash($clave_generica, PASSWORD_DEFAULT);
-    $debe_cambiar_clave = 1;
+    $legajo = $datos['legajo'] ?? null;
 
     $pdo = getConnection();
-    $pdo->setAttribute(PDO::ATTR_EMULATE_PREPARES, true);
+    $actual = usuarioPorLegajo($pdo, $legajo);
+    if ((int)$actual['id_usuario'] === (int)$user['id']) {
+        sendError("Para tu propia cuenta usá \"Cambiar contraseña\"", 409);
+    }
+
+    $clave = claveTemporal();
     $pdo->prepare("SET @usuario_actual = ?")->execute([$user['id']]);
+    $pdo->prepare(
+        "UPDATE usuarios
+            SET password_hash = ?, debe_cambiar_clave = 1, intentos_fallidos = 0, bloqueado_hasta = NULL
+          WHERE id_usuario = ?"
+    )->execute([password_hash($clave, PASSWORD_DEFAULT), $actual['id_usuario']]);
+    cerrarSesiones($pdo, (int)$actual['id_usuario']);
 
-    $stmt_reset_clave = $pdo->prepare("UPDATE usuarios SET password_hash = ?, debe_cambiar_clave = ? WHERE legajo = ?");
-    $stmt_reset_clave->execute([$password_hash, $debe_cambiar_clave, $legajo]);
+    sendSuccess(['legajo' => $actual['legajo'], 'clave_temporal' => $clave], "Contraseña reseteada.");
 
-    sendSuccess("Contraseña del usuario reseteada exitosamente.", 200);
-
-} catch (PDOException $e) {
-    $linea = date('Y-m-d H:i:s') . " | usuario=" . $user['id']
-           . " | resetear_clave | legajo =" . ($legajo ?? 'N/A')
-           . " | " . $e->getMessage();
-    @file_put_contents($archivo_log, $linea . PHP_EOL, FILE_APPEND);
-    sendError("Error al resetear la contraseña del usuario.", 500);
+} catch (Throwable $e) {
+    registrarError('resetear_clave', $user, "legajo=" . ($legajo ?? 'N/A') . " | " . $e->getMessage());
+    sendError(API_DEBUG ? $e->getMessage() : "Error al resetear la contraseña del usuario.", 500);
 }

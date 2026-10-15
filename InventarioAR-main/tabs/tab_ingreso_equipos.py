@@ -1579,11 +1579,12 @@ class IngresoEquiposTab(ApiTab):
                 modelos_clean = ['Modelo']
                 df[modelos_clean] = df[modelos_clean].apply(lambda x: x.str.strip())
                 errores_texto = {
-                    'Base Vhf Fm': 'Base VFH FM',
+                    'Base Vhf Fm': 'Base VHF FM',
                     'Vhf Aeronautico': 'VHF Aeronautico',
                     'Lineal Hf':'Lineal HF',
                     'Receptor Hf':'Receptor HF',
-                    'Exitador Hf': 'Exitador HF',
+                    'Excitador Hf': 'Excitador HF',
+                    'Exitador Hf': 'Excitador HF',   # error de tipeo frecuente en las planillas
                     'Icom':'ICOM',
                     'Cubic':'CUBIC',
                     'Glidepath':'GLIDEPATH',
