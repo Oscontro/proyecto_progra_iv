@@ -29,7 +29,7 @@ const ENDPOINTS = [
     // Estadísticas
     'estadisticas_resumen.php', 'estadistica_equipos.php', 'estadistica_stock.php',
     'estadistica_incidencias.php', 'estadistica_bajas.php', 'estadistica_distribucion.php',
-    'estadistica_distribucion_modelo.php', 'estadistica_distribucion_tipo.php',
+    'estadistica_distribucion_modelo.php', 'estadistica_distribucion_tipo.php', 'estadistica_repuestos.php',
     // Administración (requiere admin)
     'usuarios.php',
 ];
@@ -116,6 +116,23 @@ function capturar(string $salida): void {
     }
 }
 
+function normalizarOrden(array $registro): array {
+    $ordenar = function (array $lista): array {
+        if (!array_is_list($lista)) {
+            return $lista;
+        }
+        usort($lista, fn($x, $y) => strcmp(json_encode($x), json_encode($y)));
+        return $lista;
+    };
+    $cuerpo = $registro['body'] ?? null;
+    if (is_array($cuerpo) && isset($cuerpo['data']) && is_array($cuerpo['data'])) {
+        $registro['body']['data'] = $ordenar($cuerpo['data']);
+    } elseif (is_array($cuerpo)) {
+        $registro['body'] = $ordenar($cuerpo);
+    }
+    return $registro;
+}
+
 function comparar(string $a, string $b): void {
     $diferencias = 0;
     foreach (ENDPOINTS as $endpoint) {
@@ -127,8 +144,10 @@ function comparar(string $a, string $b): void {
             $diferencias++;
             continue;
         }
-        $ja = json_decode($ra, true);
-        $jb = json_decode($rb, true);
+        // El orden de las filas no cuenta: varias consultas no tienen un
+        // ORDER BY que desempate y MariaDB puede devolverlas en otro orden.
+        $ja = normalizarOrden(json_decode($ra, true));
+        $jb = normalizarOrden(json_decode($rb, true));
         if ($ja === $jb) {
             printf("%-50s igual\n", $endpoint);
             continue;

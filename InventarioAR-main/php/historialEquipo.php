@@ -36,7 +36,6 @@ try {
     echo json_encode(["success" => true, "message" => "Consulta de historial existosa", "data" => $resultado]);
 } catch(PDOException $e) {
     $error = date('Y-m-d H:i:s') . " | EXCEPCION | " . ($id_equipo ?? 'N/A') . " | " . $e->getMessage();
-    file_put_contents($archivo_log, $error . PHP_EOL, FILE_APPEND);
-    echo json_encode(["success" => false, "message" => "Error: " . $e->getMessage()]);
-    exit;
+    @file_put_contents($archivo_log, $error . PHP_EOL, FILE_APPEND);
+    sendError(API_DEBUG ? $e->getMessage() : "Error al obtener el historial del equipo", 500);
 }

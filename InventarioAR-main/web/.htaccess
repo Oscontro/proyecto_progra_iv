@@ -4,6 +4,12 @@
     Header always set X-Frame-Options "DENY"
     Header always set Referrer-Policy "same-origin"
     Header always set Content-Security-Policy "frame-ancestors 'none'"
+
+    # Revalidar siempre HTML/JS/CSS: tras publicar una versión nueva, nadie
+    # queda usando archivos viejos (se responde 304 si no cambiaron).
+    <FilesMatch "\.(html|js|mjs|css)$">
+        Header set Cache-Control "no-cache"
+    </FilesMatch>
 </IfModule>
 
 DirectoryIndex index.html

@@ -8,14 +8,16 @@ try {
     $pdo = getConnection();
 
     // Una fila por cada ingreso a taller, con el año, tipo y escala
-    // del equipo. El agrupamiento (por año, por tipo) se hace en Python.
+    // del equipo. El agrupamiento (por año, por tipo) se hace en el cliente.
+    // La escala va por nombre (no por id) porque así filtran los clientes.
     $sql = "SELECT YEAR(ti.fecha_ingreso) AS anio,
                    t.tipo,
-                   e.escala,
+                   es.escala,
                    e.id_equipo
             FROM taller_ingresos ti
             JOIN equipos e ON e.id_equipo = ti.id_equipo
             JOIN tipos t   ON t.id_tipo   = e.tipo
+            LEFT JOIN escalas es ON es.id_escala = e.escala
             WHERE ti.fecha_ingreso IS NOT NULL
             ORDER BY anio DESC";
 

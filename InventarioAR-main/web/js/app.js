@@ -329,6 +329,16 @@ function vistaPrincipal() {
         }
     }
 
+    // Atrás/Adelante o un enlace con #pestaña cambian de pestaña.
+    // El oyente se descarta solo cuando esta vista ya no está en pantalla.
+    window.addEventListener('hashchange', function alCambiarHash() {
+        if (!raiz.contains(r.pestanas)) {
+            window.removeEventListener('hashchange', alCambiarHash);
+            return;
+        }
+        activar(location.hash.slice(1));
+    });
+
     mostrarVista(vista);
     activar(location.hash.slice(1));
 }

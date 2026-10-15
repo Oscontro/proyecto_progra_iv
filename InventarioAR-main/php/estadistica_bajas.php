@@ -7,28 +7,25 @@ $archivo_log = __DIR__ . '/logs/errores_importacion.log';
 try {
     $pdo = getConnection();
 
-    $sql = "SELECT 
-                e.id_equipo,
+    // anio_baja solo si el equipo está HOY en papelera (en_papelera = 1): un
+    // equipo restaurado no cuenta como baja. Subconsultas en vez de JOIN para
+    // no duplicar filas cuando un equipo pasó varias veces por la papelera.
+    $sql = "SELECT e.id_equipo,
                 e.numero_serie,
                 t.tipo,
                 mo.modelo_equipo AS modelo,
                 es.escala,
                 e.estado,
-                MAX(YEAR(pa.fecha_eliminacion)) AS anio_baja,
-                COUNT(ti.id_ingreso) AS incidencias
+                CASE WHEN e.en_papelera = 1 THEN
+                    (SELECT YEAR(MAX(pa.fecha_eliminacion)) FROM papelera pa
+                      WHERE pa.id_equipo = e.id_equipo)
+                END AS anio_baja,
+                (SELECT COUNT(*) FROM taller_ingresos ti
+                  WHERE ti.id_equipo = e.id_equipo) AS incidencias
             FROM equipos e
             JOIN modelos mo ON mo.id_modelo = e.modelo
             JOIN tipos t   ON t.id_tipo   = e.tipo
-            JOIN escalas es ON es.id_escala = e.escala
-            LEFT JOIN papelera pa ON pa.id_equipo = e.id_equipo
-            LEFT JOIN taller_ingresos ti ON ti.id_equipo = e.id_equipo
-            GROUP BY 
-                e.id_equipo,
-                e.numero_serie,
-                t.tipo,
-                mo.modelo_equipo,
-                es.escala,
-                e.estado;";
+            JOIN escalas es ON es.id_escala = e.escala";
 
     $stmt= $pdo->prepare($sql);
     $stmt->execute();
