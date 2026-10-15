@@ -252,7 +252,7 @@ class DialogoUsuario(QDialog):
 
         # ─── INFORMACIÓN CONTRASEÑA ───
         if self.modo == "crear":
-            info_password = QLabel("⚠️ La contraseña inicial será:     1234")
+            info_password = QLabel("⚠️ Al guardar se genera una contraseña temporal")
             info_password. setFont(QFont("Arial", 12, QFont.Weight.Bold))
             info_password.setStyleSheet("""
                 QLabel {
@@ -408,16 +408,20 @@ class DialogoUsuario(QDialog):
         datos = self.obtener_datos()
         if self.modo == "crear":
             try:
-                self.api.post("alta_usuario.php", datos)
+                respuesta = self.api.post("alta_usuario.php", datos)
 
-                accion = "creado" if self.modo == "crear" else "actualizado"
+                # La clave temporal es aleatoria y el servidor la devuelve una sola vez.
+                clave = (respuesta or {}).get("clave_temporal", "")
                 QMessageBox.information(
                     self,
                     "✅ Éxito",
-                    f"Usuario '{legajo}' {accion} correctamente.\n\n"
+                    f"Usuario '{legajo}' creado correctamente.\n\n"
                     f"Username: {username}\n"
                     f"Nombre completo: {nombre} {apellido}\n"
                     f"Perfil: {self.combo_perfil.currentText()}\n\n"
+                    f"Contraseña temporal: {clave}\n"
+                    "Anótela y entréguesela al usuario: no se vuelve a mostrar.\n"
+                    "Deberá cambiarla en su primer ingreso."
                 )
                 
             except SesionExpirada:
@@ -876,7 +880,7 @@ class AdministracionTab(ApiTab):
             self.tabla_usuarios.setItem(fila, 6, item_activo)
 
             # Debe Cambiar Clave
-            debe_cambiar_clave = "No" if usuario.get("debe_cambiar_clave", False) else "Sí"
+            debe_cambiar_clave = "Sí" if usuario.get("debe_cambiar_clave", False) else "No"
             item_cambiar_clave = QTableWidgetItem(debe_cambiar_clave)
             item_cambiar_clave.setFlags(Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEnabled)
             item_cambiar_clave.setForeground(QBrush(QColor("black")))
@@ -972,18 +976,20 @@ class AdministracionTab(ApiTab):
         respuesta = QMessageBox.question(
             self,
             "🔑 Resetear Contraseña",
-            f"¿Confirma resetear la contraseña del usuario '{legajo}' a 1234?\n\n"
+            f"¿Confirma resetear la contraseña del usuario '{legajo}'?\n\n"
             "El usuario deberá cambiarla en su próximo ingreso.",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
         )
 
         if respuesta == QMessageBox.StandardButton.Yes:
             try:
-                self.api.post("resetear_clave.php", {"legajo": legajo})
+                respuesta = self.api.post("resetear_clave.php", {"legajo": legajo})
+                clave = (respuesta or {}).get("clave_temporal", "")
                 QMessageBox.information(
                     self,
                     "✅ Contraseña Reseteada",
-                    f"La contraseña del usuario '{legajo}' ha sido reseteada a 1234."
+                    f"Nueva contraseña temporal del usuario '{legajo}': {clave}\n\n"
+                    "Anótela y entréguesela al usuario: no se vuelve a mostrar."
                 )
             except SesionExpirada:
                 QMessageBox.warning(self, "Sesión expirada",

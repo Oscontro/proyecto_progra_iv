@@ -21,7 +21,7 @@ export const PESTANAS = [
     { id: 'repuestos',      titulo: 'Repuestos',          icono: '🔩', cargar: () => import('./pestanas/repuestos.js') },
     { id: 'papelera',       titulo: 'Papelera',           icono: '🗑️', cargar: () => import('./pestanas/papelera.js') },
     { id: 'estadisticas',   titulo: 'Estadísticas',       icono: '📊', cargar: () => import('./pestanas/estadisticas.js') },
-    { id: 'administracion', titulo: 'Administración',     icono: '👤', cargar: null, soloAdmin: true },
+    { id: 'administracion', titulo: 'Administración',     icono: '👤', cargar: () => import('./pestanas/administracion.js'), soloAdmin: true },
 ];
 
 export function pestanasPara(usuario) {

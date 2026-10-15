@@ -575,3 +575,6 @@ th[aria-sort="descending"] .th-orden::after { content: ' ▼'; opacity: 1; }
 .resultado-lista { color: var(--azul-oscuro); }
 .resultado-guardada { color: #1b5e20; font-weight: bold; }
 .resultado-error { color: var(--rojo-oscuro); font-weight: bold; }
+
+/* Administración */
+.clave-temporal { padding: 0.5rem 0.9rem; border: 2px dashed var(--azul); border-radius: var(--radio); background: var(--azul-claro); font-size: 1.4rem; letter-spacing: 0.08em; user-select: all; }
