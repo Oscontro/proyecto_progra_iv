@@ -1,6 +1,7 @@
 <?php
-// Activa o desactiva un usuario. "activo" es el estado NUEVO (true/false;
-// también se acepta "activar"/"desactivar").
+// Activa o desactiva un usuario. "activo" es el estado NUEVO (true/false).
+// Activar una cuenta pendiente (registrada desde la portada) la aprueba.
+// Al desactivar, sus sesiones abiertas dejan de valer en el próximo pedido.
 require_once 'usuarios_comun.php';
 $user = requireAdmin();
 
@@ -23,12 +24,12 @@ try {
     }
 
     $pdo->prepare("SET @usuario_actual = ?")->execute([$user['id']]);
-    $pdo->prepare("UPDATE usuarios SET activo = ? WHERE id_usuario = ?")->execute([$activo, $actual['id_usuario']]);
-    if (!$activo) {
-        cerrarSesiones($pdo, (int)$actual['id_usuario']);
-    }
+    // Activar una cuenta registrada desde la portada es aprobarla.
+    $pdo->prepare("UPDATE usuarios SET activo = ?, pendiente_aprobacion = IF(? = 1, 0, pendiente_aprobacion) WHERE id_usuario = ?")
+        ->execute([$activo, $activo, $actual['id_usuario']]);
 
-    sendSuccess(['activo' => (bool)$activo], $activo ? "Usuario activado." : "Usuario desactivado.");
+    $mensaje = $activo ? ($actual['pendiente_aprobacion'] ? "Cuenta aprobada." : "Usuario activado.") : "Usuario desactivado.";
+    sendSuccess(['activo' => (bool)$activo], $mensaje);
 
 } catch (Throwable $e) {
     registrarError('toggle_activo', $user, "legajo=" . ($legajo ?? 'N/A') . " | " . $e->getMessage());

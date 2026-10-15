@@ -83,18 +83,6 @@ input[type="text"]:focus, input[type="password"]:focus { border-color: var(--azu
 
 .casilla { display: flex; align-items: center; gap: 0.5rem; font-weight: normal; }
 
-.campo-clave { position: relative; }
-.campo-clave input { padding-right: 3rem; }
-.btn-ver-clave {
-    position: absolute;
-    inset: 0 0 0 auto;
-    width: 2.8rem;
-    border: none;
-    background: transparent;
-    font-size: 1.1rem;
-    cursor: pointer;
-}
-
 .ayuda { display: block; margin-top: 0.3rem; color: var(--texto-suave); }
 
 .acciones { display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1.5rem; flex-wrap: wrap; }
@@ -143,13 +131,6 @@ input[type="text"]:focus, input[type="password"]:focus { border-color: var(--azu
     color: #fff;
     text-align: center;
 }
-.acceso-logo {
-    padding: 0.75rem;
-    background: rgba(255, 255, 255, 0.15);
-    border: 3px solid rgba(255, 255, 255, 0.4);
-    border-radius: 12px;
-}
-.acceso-logo img { display: block; max-width: 100%; max-height: 110px; margin: 0 auto; }
 .acceso-icono { font-size: 4.5rem; }
 .acceso-sistema { margin: 0; font-size: 1.25rem; font-weight: bold; line-height: 1.4; }
 
@@ -174,7 +155,8 @@ input[type="text"]:focus, input[type="password"]:focus { border-color: var(--azu
     color: #fff;
     flex-wrap: wrap;
 }
-.barra-logo { width: 48px; height: 48px; object-fit: contain; }
+.barra-logo { display: block; width: 48px; height: 48px; border-radius: 10px; background: rgba(255, 255, 255, 0.15); }
+.barra-inicio { display: block; border-radius: 10px; }
 .barra-titulo { flex: 1; margin: 0; font-size: 1.35rem; }
 .barra-usuario { display: flex; align-items: center; gap: 0.6rem; }
 .barra-usuario strong, .barra-usuario small { display: block; }
@@ -258,7 +240,6 @@ input[type="text"]:focus, input[type="password"]:focus { border-color: var(--azu
 @media (max-width: 760px) {
     .acceso { flex-direction: column; }
     .acceso-marca { flex: none; padding: 1.5rem 1rem; }
-    .acceso-logo img { max-height: 70px; }
     .acceso-icono { font-size: 3rem; }
     .barra-titulo { flex-basis: 100%; order: -1; font-size: 1.1rem; }
     .barra-logo { display: none; }
@@ -578,3 +559,6 @@ th[aria-sort="descending"] .th-orden::after { content: ' ▼'; opacity: 1; }
 
 /* Administración */
 .clave-temporal { padding: 0.5rem 0.9rem; border: 2px dashed var(--azul); border-radius: var(--radio); background: var(--azul-claro); font-size: 1.4rem; letter-spacing: 0.08em; user-select: all; }
+
+/* Consultas de contacto */
+.mensaje-consulta { white-space: pre-wrap; line-height: 1.55; padding: 0.9rem 1rem; background: #f7f9fa; border-radius: var(--radio); }

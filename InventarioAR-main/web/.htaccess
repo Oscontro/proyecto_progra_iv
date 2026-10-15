@@ -12,4 +12,4 @@
     </FilesMatch>
 </IfModule>
 
-DirectoryIndex index.html
+DirectoryIndex index.php

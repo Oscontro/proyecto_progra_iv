@@ -19,6 +19,10 @@
 -- Aplicar:  mysql -uroot inventario_radios < 2026-10-14_egreso_con_repuestos_reales.sql
 -- ═══════════════════════════════════════════════════════════════════
 
+-- Los comentarios llevan acentos: sin esto, el cliente mysql de Windows los
+-- interpreta con la página de códigos de la consola y quedan mal guardados.
+SET NAMES utf8mb4;
+
 CREATE TABLE IF NOT EXISTS `taller_egreso_repuestos` (
   `id`              INT(11)      NOT NULL AUTO_INCREMENT,
   `id_egreso`       INT(11)      NOT NULL,

@@ -1,7 +1,8 @@
 <?php
 // Resetea la clave de un usuario a una temporal aleatoria (se devuelve UNA
 // vez en "clave_temporal"), obliga a cambiarla, quita el bloqueo por
-// intentos fallidos y cierra sus sesiones abiertas.
+// intentos fallidos. Las sesiones abiertas con la clave anterior dejan de
+// valer (sesion.php compara la huella de la contraseña).
 require_once 'usuarios_comun.php';
 $user = requireAdmin();
 
@@ -27,7 +28,6 @@ try {
             SET password_hash = ?, debe_cambiar_clave = 1, intentos_fallidos = 0, bloqueado_hasta = NULL
           WHERE id_usuario = ?"
     )->execute([password_hash($clave, PASSWORD_DEFAULT), $actual['id_usuario']]);
-    cerrarSesiones($pdo, (int)$actual['id_usuario']);
 
     sendSuccess(['legajo' => $actual['legajo'], 'clave_temporal' => $clave], "Contraseña reseteada.");
 

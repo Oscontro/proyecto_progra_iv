@@ -32,7 +32,7 @@ export function el(tag, atributos = {}, ...hijos) {
     return nodo;
 }
 
-/** Clona el contenido de un <template id="..."> de index.html. */
+/** Clona el contenido de un <template id="..."> de app.php. */
 export function plantilla(id) {
     return document.getElementById(id).content.firstElementChild.cloneNode(true);
 }
@@ -91,17 +91,6 @@ export async function ocupado(formulario, operacion) {
         controles.forEach(([c, estabaDeshabilitado]) => { c.disabled = estabaDeshabilitado; });
         formulario.removeAttribute('aria-busy');
     }
-}
-
-/** Muestra u oculta el texto de un campo de contraseña. */
-export function conectarVerClave(boton, campo) {
-    boton.addEventListener('click', () => {
-        const visible = campo.type === 'text';
-        campo.type = visible ? 'password' : 'text';
-        boton.setAttribute('aria-pressed', String(!visible));
-        boton.setAttribute('aria-label', visible ? 'Mostrar contraseña' : 'Ocultar contraseña');
-        campo.focus();
-    });
 }
 
 // ─────────────────────────────────────────────────────────

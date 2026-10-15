@@ -10,13 +10,14 @@ try {
     $stmt = $pdo->query(
         "SELECT id_usuario, legajo, username, nombre, apellido, email,
                 IF(es_administrador = 1, 'Administrador', 'Técnico') AS perfil,
-                activo, debe_cambiar_clave,
+                activo, pendiente_aprobacion, debe_cambiar_clave,
                 fecha_ultima_conexion AS ultima_conexion,
                 IF(bloqueado_hasta > NOW(), bloqueado_hasta, NULL) AS bloqueado_hasta
            FROM usuarios
           ORDER BY id_usuario");
     $usuarios = array_map(function ($u) {
         $u['activo'] = (bool)$u['activo'];
+        $u['pendiente_aprobacion'] = (bool)$u['pendiente_aprobacion'];
         $u['debe_cambiar_clave'] = (bool)$u['debe_cambiar_clave'];
         return $u;
     }, $stmt->fetchAll(PDO::FETCH_ASSOC));

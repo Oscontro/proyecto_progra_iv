@@ -8,9 +8,12 @@
 //   - Siempre tiene que quedar al menos un administrador activo.
 //   - La clave temporal (alta y reseteo) es aleatoria y se devuelve una sola
 //     vez para que el administrador se la pase al usuario; ya no es "1234".
+//
+// Las sesiones abiertas de un usuario dejan de valer solas cuando se lo
+// desactiva o se le resetea la clave: sesion.php revisa en cada pedido que
+// la cuenta siga activa y que la huella de la contraseña no haya cambiado.
 require_once 'auth.php';
-
-const PERFILES = ['Técnico' => 0, 'Administrador' => 1];
+require_once 'usuarios_validacion.php';
 
 /** Usuario por legajo, o corta con 404. */
 function usuarioPorLegajo(PDO $pdo, $legajo): array {
@@ -18,7 +21,7 @@ function usuarioPorLegajo(PDO $pdo, $legajo): array {
     if ($legajo === '') {
         sendError("Falta el legajo", 400);
     }
-    $stmt = $pdo->prepare("SELECT id_usuario, legajo, username, es_administrador, activo FROM usuarios WHERE legajo = ?");
+    $stmt = $pdo->prepare("SELECT id_usuario, legajo, username, es_administrador, activo, pendiente_aprobacion FROM usuarios WHERE legajo = ?");
     $stmt->execute([$legajo]);
     $usuario = $stmt->fetch(PDO::FETCH_ASSOC);
     if (!$usuario) {
@@ -27,31 +30,11 @@ function usuarioPorLegajo(PDO $pdo, $legajo): array {
     return $usuario;
 }
 
-/** Valida los datos del formulario de usuario y los devuelve normalizados. */
+/** Valida los datos del formulario de Administración y los devuelve normalizados (o corta con 400). */
 function datosUsuario(array $datos): array {
-    $texto = function (string $clave, string $nombre, int $maximo, bool $obligatorio = true) use ($datos): ?string {
-        $valor = trim((string)($datos[$clave] ?? ''));
-        if ($valor === '') {
-            if ($obligatorio) sendError("Falta $nombre", 400);
-            return null;
-        }
-        if (mb_strlen($valor) > $maximo) {
-            sendError(ucfirst($nombre) . " admite hasta $maximo caracteres", 400);
-        }
-        return $valor;
-    };
-    $resultado = [
-        'legajo'   => $texto('legajo', 'el legajo', 50),
-        'username' => $texto('username', 'el usuario', 100),
-        'nombre'   => $texto('nombre', 'el nombre', 100),
-        'apellido' => $texto('apellido', 'el apellido', 100),
-        'email'    => $texto('email', 'el email', 150, false),
-    ];
-    if (preg_match('/\s/u', $resultado['legajo']) || preg_match('/\s/u', $resultado['username'])) {
-        sendError("El legajo y el usuario no pueden tener espacios", 400);
-    }
-    if ($resultado['email'] !== null && !filter_var($resultado['email'], FILTER_VALIDATE_EMAIL)) {
-        sendError("El email no es válido", 400);
+    [$resultado, $error] = validarDatosPersonales($datos);
+    if ($error) {
+        sendError($error, 400);
     }
     $perfil = $datos['perfil'] ?? '';
     if (!array_key_exists($perfil, PERFILES)) {
@@ -62,7 +45,7 @@ function datosUsuario(array $datos): array {
     return $resultado;
 }
 
-/** true/false, 1/0 o "activar"/"desactivar" (como lo mandaba el escritorio). */
+/** true/false o 1/0 (también acepta "activar"). */
 function leerBooleano($valor): int {
     if (is_string($valor)) {
         $valor = strtolower(trim($valor));
@@ -102,20 +85,11 @@ function claveTemporal(): string {
     return $clave;
 }
 
-/** Cierra todas las sesiones abiertas de un usuario. */
-function cerrarSesiones(PDO $pdo, int $id_usuario): void {
-    $pdo->prepare("DELETE FROM sessions WHERE usuario_id = ?")->execute([$id_usuario]);
-}
-
 /** Corta con 409 si el legajo o el usuario ya los usa otra cuenta. */
 function controlarDuplicados(PDO $pdo, string $legajo, string $username, ?int $excluirId = null): void {
-    $stmt = $pdo->prepare("SELECT legajo, username FROM usuarios WHERE (legajo = ? OR username = ?) AND id_usuario <> ?");
-    $stmt->execute([$legajo, $username, $excluirId ?? 0]);
-    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $otro) {
-        if (strcasecmp($otro['legajo'], $legajo) === 0) {
-            sendError("El legajo '$legajo' ya se encuentra registrado", 409);
-        }
-        sendError("El nombre de usuario '$username' ya está en uso", 409);
+    $error = buscarDuplicado($pdo, $legajo, $username, $excluirId);
+    if ($error) {
+        sendError($error, 409);
     }
 }
 

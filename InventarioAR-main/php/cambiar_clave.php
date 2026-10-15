@@ -19,7 +19,7 @@ try {
 
     $pdo = getConnection();
 
-    // Traemos el hash actual del usuario (identificado por el TOKEN, no por el cliente).
+    // Traemos el hash actual del usuario (identificado por la sesión, no por el cliente).
     $stmt = $pdo->prepare("SELECT password_hash, debe_cambiar_clave FROM usuarios WHERE id_usuario = ?");
     $stmt->execute([$user['id']]);
     $fila = $stmt->fetch();
@@ -45,6 +45,8 @@ try {
     $pdo->prepare(
         "UPDATE usuarios SET password_hash = ?, debe_cambiar_clave = 0 WHERE id_usuario = ?"
     )->execute([$hash, $user['id']]);
+    // La sesión actual sigue valiendo con la clave nueva (las demás no).
+    actualizarHuellaSesion($hash);
 
     sendSuccess(['cambiada' => true], 'Contraseña actualizada correctamente');
 

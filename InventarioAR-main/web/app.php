@@ -1,12 +1,26 @@
+<?php
+// Aplicación (zona protegida). Solo se muestra con una sesión de PHP válida:
+// sin sesión redirige a la página de error (como pide la consigna).
+// El contenido lo arma js/app.js consultando la API (php/*.php).
+require_once __DIR__ . '/inc/inicio.php';
+
+if (!usuarioActual()) {
+    irAError('sin_sesion');
+}
+session_write_close();   // la API usa la misma sesión: no dejarla bloqueada
+
+header('Content-Type: text/html; charset=utf-8');
+header('Cache-Control: no-store');
+header("Content-Security-Policy: default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; "
+     . "connect-src 'self'; base-uri 'self'; form-action 'self'; object-src 'none'; frame-ancestors 'none'");
+?>
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta http-equiv="Content-Security-Policy"
-          content="default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; connect-src 'self'; base-uri 'self'; form-action 'self'; object-src 'none'">
-    <title>Inventario de Radios</title>
-    <link rel="icon" href="../resources/images/logos/aerolineas_icono.png">
+    <title>Sistema · <?= e(NOMBRE_SISTEMA) ?></title>
+    <link rel="icon" href="img/logo.svg" type="image/svg+xml">
     <link rel="stylesheet" href="css/app.css">
     <script type="module" src="js/app.js"></script>
 </head>
@@ -38,40 +52,6 @@
                 <p class="mensaje-error" data-ref="mensaje"></p>
                 <button type="button" class="btn btn-primario" data-ref="reintentar">Reintentar</button>
             </div>
-        </div>
-    </template>
-
-    <template id="tpl-login">
-        <div class="acceso">
-            <aside class="acceso-marca">
-                <div class="acceso-logo">
-                    <img src="../resources/images/logos/aerolineas_logo.png" alt="Aerolíneas Argentinas">
-                </div>
-                <p class="acceso-sistema">Sistema de Inventario de Equipos de Radio</p>
-            </aside>
-            <section class="acceso-panel">
-                <form class="tarjeta" data-ref="form" novalidate>
-                    <h1>Iniciar sesión</h1>
-                    <p class="mensaje-error" data-ref="error" role="alert" hidden></p>
-
-                    <label for="login-usuario">Usuario</label>
-                    <input id="login-usuario" name="usuario" type="text" autocomplete="username"
-                           placeholder="Ingrese su usuario" required>
-
-                    <label for="login-clave">Contraseña</label>
-                    <div class="campo-clave">
-                        <input id="login-clave" name="clave" type="password" autocomplete="current-password"
-                               placeholder="Ingrese su contraseña" required>
-                        <button type="button" class="btn-ver-clave" data-ref="ver" aria-label="Mostrar contraseña" aria-pressed="false">👁️</button>
-                    </div>
-
-                    <label class="casilla">
-                        <input type="checkbox" name="recordar"> Recordar mi usuario
-                    </label>
-
-                    <button type="submit" class="btn btn-primario btn-ancho">Ingresar</button>
-                </form>
-            </section>
         </div>
     </template>
 
@@ -112,7 +92,9 @@
     <template id="tpl-principal">
         <div class="principal">
             <header class="barra">
-                <img class="barra-logo" src="../resources/images/logos/aerolineas_icono.png" alt="">
+                <a class="barra-inicio" href="index.php" title="Ir a la portada">
+                    <img class="barra-logo" src="img/logo.svg" alt="Portada">
+                </a>
                 <h1 class="barra-titulo">Sistema de Inventario de Equipos de Radio</h1>
                 <div class="barra-usuario">
                     <span class="barra-icono" data-ref="icono" aria-hidden="true"></span>

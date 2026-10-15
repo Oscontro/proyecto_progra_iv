@@ -1,16 +1,17 @@
-// Punto de entrada de la aplicación web (equivalente a main.py).
+// Punto de entrada de la aplicación web (zona protegida, app.php).
 //
 // Flujo:
-//   1. me.php dice si hay una sesión válida (cookie).
-//   2. Sin sesión -> login. Con clave temporal -> cambio de clave obligatorio.
+//   1. app.php ya verificó en el servidor que hay una sesión de PHP válida;
+//      el login lo hace la página ingresar.php.
+//   2. me.php dice quién es el usuario. Con clave temporal -> cambio de clave obligatorio.
 //   3. Si no, la ventana principal con las pestañas que corresponden al rol.
+//   4. Si la sesión vence o se cierra, se vuelve a las páginas públicas.
 
 import { api, ApiError, SesionExpirada, ClavePendiente } from './api.js';
-import { plantilla, aviso, confirmar, ocupado, conectarVerClave, el } from './ui.js';
+import { plantilla, aviso, confirmar, ocupado, el } from './ui.js';
 import { pestanasPara } from './pestanas.js';
 
 const raiz = document.getElementById('app');
-const CLAVE_USUARIO_RECORDADO = 'inventario.ultimo_usuario';
 
 // Usuario de la sesión actual (null mientras no haya sesión).
 let usuarioActual = null;
@@ -33,25 +34,14 @@ function mostrarError(parrafo, mensaje) {
     parrafo.hidden = !mensaje;
 }
 
-// localStorage puede no estar disponible (modo privado, bloqueos): nunca debe romper el login.
-function leerUsuarioRecordado() {
-    try {
-        return localStorage.getItem(CLAVE_USUARIO_RECORDADO) || '';
-    } catch {
-        return '';
-    }
+/** Sin sesión válida la aplicación no se muestra: página de error de acceso. */
+function irASesionVencida() {
+    location.replace('error.php?codigo=sesion_vencida');
 }
 
-function guardarUsuarioRecordado(usuario, recordar) {
-    try {
-        if (recordar) {
-            localStorage.setItem(CLAVE_USUARIO_RECORDADO, usuario);
-        } else {
-            localStorage.removeItem(CLAVE_USUARIO_RECORDADO);
-        }
-    } catch {
-        // sin almacenamiento: simplemente no se recuerda
-    }
+async function salir() {
+    await api.logout();
+    location.replace('index.php?salida=1');
 }
 
 // ─────────────────────────────────────────────────────────
@@ -63,7 +53,7 @@ async function iniciar() {
         entrar(await api.me());
     } catch (error) {
         if (error instanceof SesionExpirada) {
-            vistaLogin();
+            irASesionVencida();
             return;
         }
         const vista = plantilla('tpl-error-inicio');
@@ -86,10 +76,8 @@ function entrar(usuario) {
 
 // Reacciones globales a errores de sesión, vengan de la pestaña que vengan.
 api.alExpirarSesion(() => {
-    if (usuarioActual) {
-        usuarioActual = null;
-        vistaLogin('Tu sesión venció. Volvé a iniciar sesión.');
-    }
+    usuarioActual = null;
+    irASesionVencida();
 });
 
 api.alPedirCambioClave(() => {
@@ -98,49 +86,6 @@ api.alPedirCambioClave(() => {
         vistaCambioClave({ obligatorio: true });
     }
 });
-
-// ─────────────────────────────────────────────────────────
-// Login
-// ─────────────────────────────────────────────────────────
-function vistaLogin(mensaje = '') {
-    const vista = plantilla('tpl-login');
-    const r = refs(vista);
-    const form = r.form;
-    const recordado = leerUsuarioRecordado();
-
-    conectarVerClave(r.ver, form.clave);
-    mostrarError(r.error, mensaje);
-    if (recordado) {
-        form.usuario.value = recordado;
-        form.recordar.checked = true;
-    }
-
-    form.addEventListener('submit', async (evento) => {
-        evento.preventDefault();
-        const usuario = form.usuario.value.trim();
-        const clave = form.clave.value;
-
-        if (!usuario || !clave) {
-            mostrarError(r.error, 'Por favor complete usuario y contraseña.');
-            (usuario ? form.clave : form.usuario).focus();
-            return;
-        }
-
-        mostrarError(r.error, '');
-        try {
-            const datos = await ocupado(form, () => api.login(usuario, clave));
-            guardarUsuarioRecordado(usuario, form.recordar.checked);
-            entrar(datos);
-        } catch (error) {
-            mostrarError(r.error, error.message);
-            form.clave.value = '';
-            form.clave.focus();
-        }
-    });
-
-    mostrarVista(vista);
-    (recordado ? form.clave : form.usuario).focus();
-}
 
 // ─────────────────────────────────────────────────────────
 // Cambio de contraseña (obligatorio tras clave temporal, u opcional)
@@ -159,9 +104,7 @@ function vistaCambioClave({ obligatorio }) {
     r.cancelar.textContent = obligatorio ? 'Cerrar sesión' : 'Cancelar';
     r.cancelar.addEventListener('click', async () => {
         if (obligatorio) {
-            await api.logout();
-            usuarioActual = null;
-            vistaLogin();
+            await salir();
         } else {
             vistaPrincipal();
         }
@@ -197,7 +140,7 @@ function vistaCambioClave({ obligatorio }) {
             vistaPrincipal();
         } catch (error) {
             if (error instanceof SesionExpirada) {
-                return; // el oyente global ya llevó al login
+                return; // el oyente global ya llevó a la página de sesión vencida
             }
             // Acá cae "clave actual incorrecta", "debe ser distinta", etc.
             mostrarError(r.error, error.message);
@@ -225,9 +168,7 @@ function vistaPrincipal() {
         const ok = await confirmar('Cerrar sesión', '¿Está seguro que desea cerrar la sesión?',
                                    { aceptar: 'Cerrar sesión', peligro: true });
         if (ok) {
-            await api.logout();
-            usuarioActual = null;
-            vistaLogin();
+            await salir();
         }
     });
     r['cambiar-clave'].addEventListener('click', () => vistaCambioClave({ obligatorio: false }));

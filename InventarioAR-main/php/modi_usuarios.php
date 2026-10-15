@@ -26,9 +26,6 @@ try {
           WHERE id_usuario = ?"
     )->execute([$u['username'], $u['nombre'], $u['apellido'], $u['email'],
                 $u['es_administrador'], $u['activo'], $actual['id_usuario']]);
-    if (!$u['activo']) {
-        cerrarSesiones($pdo, (int)$actual['id_usuario']);
-    }
 
     sendSuccess(['legajo' => $legajo], "Usuario actualizado exitosamente.");
 

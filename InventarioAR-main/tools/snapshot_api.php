@@ -10,10 +10,11 @@
  *
  * Variables de entorno para "capturar":
  *   API_BASE   URL base de la API (por defecto http://localhost/proyecto_progra_iv/InventarioAR-main/php)
- *   API_TOKEN  token Bearer ya emitido, o bien:
- *   API_USER / API_PASS  credenciales para hacer login (crea una sesión nueva)
+ *   API_USER / API_PASS  usuario administrador: se ingresa por web/ingresar.php
+ *              (formulario con token CSRF) y se usa la cookie de la sesión de PHP.
  *
- * Solo se llaman endpoints de lectura: no modifica datos.
+ * Solo se llaman endpoints de lectura: no modifica datos (salvo la fecha de
+ * última conexión del usuario que ingresa).
  */
 
 const ENDPOINTS = [
@@ -34,32 +35,56 @@ const ENDPOINTS = [
     'usuarios.php',
 ];
 
-function pedir(string $url, ?string $token, ?array $json = null): array {
+// Archivo de cookies de la sesión de PHP mientras dura la captura.
+function archivoCookies(): string {
+    static $archivo = null;
+    return $archivo ??= tempnam(sys_get_temp_dir(), 'snap');
+}
+
+/** Pedido HTTP con la cookie de sesión. $form: POST de formulario; $api: agrega X-Requested-With. */
+function pedir(string $url, ?array $form = null, bool $api = true): array {
     $ch = curl_init($url);
-    $headers = ['Accept: application/json'];
-    if ($token) {
-        $headers[] = "Authorization: Bearer $token";
+    $headers = ['Accept: application/json, text/html'];
+    if ($api) {
+        $headers[] = 'X-Requested-With: XMLHttpRequest';
     }
-    if ($json !== null) {
-        $headers[] = 'Content-Type: application/json';
+    if ($form !== null) {
         curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($json));
+        curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($form));
     }
     curl_setopt_array($ch, [
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_HTTPHEADER     => $headers,
         CURLOPT_TIMEOUT        => 30,
+        CURLOPT_COOKIEFILE     => archivoCookies(),
+        CURLOPT_COOKIEJAR      => archivoCookies(),
     ]);
     $cuerpo = curl_exec($ch);
     $codigo = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $destino = (string)curl_getinfo($ch, CURLINFO_REDIRECT_URL);
     curl_close($ch);
-    return [$codigo, $cuerpo === false ? '' : $cuerpo];
+    return [$codigo, $cuerpo === false ? '' : $cuerpo, $destino];
+}
+
+/** Ingresa como lo haría el navegador: pide el formulario (token CSRF) y lo envía. */
+function ingresar(string $base, string $usuario, string $clave): void {
+    $web = preg_replace('~/php$~', '/web', $base);
+    [, $html] = pedir("$web/ingresar.php", null, false);
+    if (!preg_match('/name="csrf" value="([0-9a-f]+)"/', $html, $m)) {
+        fwrite(STDERR, "No se encontró el formulario de ingreso en $web/ingresar.php\n");
+        exit(1);
+    }
+    [$codigo, , $destino] = pedir("$web/ingresar.php", ['csrf' => $m[1], 'usuario' => $usuario, 'clave' => $clave], false);
+    if ($codigo !== 303 || !str_ends_with($destino, 'app.php')) {
+        fwrite(STDERR, "Login fallido ($codigo -> $destino)\n");
+        exit(1);
+    }
 }
 
 // Valores de ejemplo para los endpoints con parámetros, tomados de datos reales.
-function valoresEjemplo(string $base, string $token): array {
+function valoresEjemplo(string $base): array {
     $valores = ['id_equipo' => '1', 'numero_serie' => ''];
-    [$codigo, $cuerpo] = pedir("$base/consultaInventario.php", $token);
+    [$codigo, $cuerpo] = pedir("$base/consultaInventario.php");
     $datos = json_decode($cuerpo, true);
     if (isset($datos['data'])) {
         $datos = $datos['data'];
@@ -76,33 +101,23 @@ function nombreArchivo(string $endpoint): string {
 }
 
 function capturar(string $salida): void {
-    $base  = rtrim(getenv('API_BASE') ?: 'http://localhost/proyecto_progra_iv/InventarioAR-main/php', '/');
-    $token = getenv('API_TOKEN') ?: null;
-
-    if (!$token) {
-        $usuario = getenv('API_USER');
-        $clave   = getenv('API_PASS');
-        if (!$usuario || !$clave) {
-            fwrite(STDERR, "Definí API_TOKEN, o API_USER y API_PASS.\n");
-            exit(1);
-        }
-        [$codigo, $cuerpo] = pedir("$base/login.php", null, ['username' => $usuario, 'password' => $clave]);
-        $token = json_decode($cuerpo, true)['data']['token'] ?? null;
-        if ($codigo !== 200 || !$token) {
-            fwrite(STDERR, "Login fallido ($codigo): $cuerpo\n");
-            exit(1);
-        }
+    $base    = rtrim(getenv('API_BASE') ?: 'http://localhost/proyecto_progra_iv/InventarioAR-main/php', '/');
+    $usuario = getenv('API_USER');
+    $clave   = getenv('API_PASS');
+    if (!$usuario || !$clave) {
+        fwrite(STDERR, "Definí API_USER y API_PASS (usuario administrador).\n");
+        exit(1);
     }
-
     if (!is_dir($salida) && !mkdir($salida, 0777, true)) {
         fwrite(STDERR, "No se pudo crear $salida\n");
         exit(1);
     }
 
-    $valores = valoresEjemplo($base, $token);
+    ingresar($base, $usuario, $clave);
+    $valores = valoresEjemplo($base);
     foreach (ENDPOINTS as $endpoint) {
         $ruta = preg_replace_callback('/\{(\w+)\}/', fn($m) => rawurlencode($valores[$m[1]] ?? ''), $endpoint);
-        [$codigo, $cuerpo] = pedir("$base/$ruta", $token);
+        [$codigo, $cuerpo] = pedir("$base/$ruta");
         $decodificado = json_decode($cuerpo, true);
         $registro = [
             'endpoint' => $endpoint,
@@ -114,6 +129,8 @@ function capturar(string $salida): void {
             json_encode($registro, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
         printf("%-50s %d%s\n", $endpoint, $codigo, $registro['es_json'] ? '' : '  (NO JSON)');
     }
+    pedir("$base/logout.php", []);
+    @unlink(archivoCookies());
 }
 
 function normalizarOrden(array $registro): array {

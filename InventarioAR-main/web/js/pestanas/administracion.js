@@ -1,7 +1,8 @@
 // Pestaña Administración (equivalente a tabs/tab_administracion.py). Solo administradores.
 //
-// Usuarios: búsqueda y filtro por perfil, alta, edición, reseteo de clave,
-// activar/desactivar y eliminación.
+// Usuarios: búsqueda y filtros por perfil y estado, alta, edición, reseteo
+// de clave, activar/desactivar, aprobación de las cuentas registradas desde
+// la portada (quedan pendientes) y eliminación.
 //
 // La clave temporal (alta y reseteo) la genera el servidor al azar y se
 // muestra una sola vez para pasársela al usuario (decisión de la migración:
@@ -15,6 +16,17 @@ import { tablaSeleccionable } from '../tabla_seleccionable.js';
 
 const PERFILES = ['Técnico', 'Administrador'];
 const TODOS = '';
+const ESTADOS = [
+    { valor: TODOS, texto: 'Todos los estados' },
+    { valor: 'activo', texto: 'Activos' },
+    { valor: 'inactivo', texto: 'Desactivados' },
+    { valor: 'pendiente', texto: 'Pendientes de aprobación' },
+];
+
+function estadoDe(u) {
+    if (u.pendiente_aprobacion) return 'pendiente';
+    return u.activo ? 'activo' : 'inactivo';
+}
 
 const COLUMNAS = [
     { clave: 'legajo', titulo: 'Legajo' },
@@ -23,7 +35,7 @@ const COLUMNAS = [
     { clave: 'apellido', titulo: 'Apellido' },
     { clave: 'email', titulo: 'Email' },
     { clave: 'perfil', titulo: 'Perfil' },
-    { clave: 'activo_texto', titulo: 'Activo' },
+    { clave: 'activo_texto', titulo: 'Estado' },
     { clave: 'cambiar_clave_texto', titulo: 'Debe cambiar clave' },
     { clave: 'bloqueado_hasta', titulo: 'Bloqueado hasta' },
     { clave: 'ultima_conexion', titulo: 'Última conexión' },
@@ -40,6 +52,8 @@ export function montar(contenedor, { api, usuario: sesion }) {
     const buscar = el('input', { type: 'search', id: 'adm-buscar', placeholder: 'Legajo, usuario, nombre o apellido…', autocomplete: 'off' });
     const estado = el('p', { class: 'estado-carga', role: 'status' });
     const fPerfil = campoSelect('Perfil', [{ valor: TODOS, texto: 'Todos los perfiles' }, ...PERFILES], { id: 'adm-perfil', alCambiar: aplicarFiltros });
+    const fEstado = campoSelect('Estado', ESTADOS, { id: 'adm-estado', alCambiar: aplicarFiltros });
+    const avisoPendientes = el('p', { class: 'mensaje-info', hidden: true });
 
     const btnEditar = el('button', { type: 'button', class: 'btn btn-primario', disabled: true, onclick: () => editar() }, '✏️ Editar');
     const btnReset = el('button', { type: 'button', class: 'btn btn-advertencia', disabled: true, onclick: resetearClave }, '🔑 Resetear clave');
@@ -57,9 +71,10 @@ export function montar(contenedor, { api, usuario: sesion }) {
 
     contenedor.append(
         el('div', { class: 'cabecera-pestana' }, el('h2', {}, 'Administración de usuarios'), estado),
+        avisoPendientes,
         el('div', { class: 'filtros' },
             el('div', { class: 'campo campo-ancho' }, el('label', { for: buscar.id }, 'Buscar'), buscar),
-            fPerfil.nodo,
+            fPerfil.nodo, fEstado.nodo,
             el('button', { type: 'button', class: 'btn btn-secundario', onclick: () => cargar() }, '🔁 Actualizar'),
             el('button', { type: 'button', class: 'btn btn-exito', onclick: () => formulario(null) }, '➕ Crear usuario')),
         tabla.contador,
@@ -74,9 +89,10 @@ export function montar(contenedor, { api, usuario: sesion }) {
         try {
             completos = (await api.get('usuarios.php')).map((u) => ({
                 ...u,
-                activo_texto: u.activo ? 'Sí' : 'No',
+                activo_texto: { activo: 'Activo', inactivo: 'Desactivado', pendiente: '⏳ Pendiente' }[estadoDe(u)],
                 cambiar_clave_texto: u.debe_cambiar_clave ? 'Sí' : 'No',
             }));
+            mostrarPendientes();
             aplicarFiltros();
         } catch (error) {
             manejarError(error, 'No se pudieron cargar los usuarios');
@@ -85,12 +101,26 @@ export function montar(contenedor, { api, usuario: sesion }) {
         }
     }
 
+    function mostrarPendientes() {
+        const cantidad = completos.filter((u) => u.pendiente_aprobacion).length;
+        avisoPendientes.hidden = !cantidad;
+        avisoPendientes.replaceChildren(
+            cantidad === 1 ? 'Hay 1 cuenta registrada desde la portada esperando aprobación. '
+                           : `Hay ${cantidad} cuentas registradas desde la portada esperando aprobación. `,
+            el('button', { type: 'button', class: 'btn btn-secundario', onclick: () => {
+                fEstado.select.value = 'pendiente';
+                aplicarFiltros();
+            } }, 'Ver pendientes'));
+    }
+
     function aplicarFiltros() {
         const texto = buscar.value.trim().toLowerCase();
         const perfil = fPerfil.select.value;
+        const estadoFiltro = fEstado.select.value;
         const filtrados = completos.filter((u) =>
             (!texto || [u.legajo, u.username, u.nombre, u.apellido].some((v) => String(v ?? '').toLowerCase().includes(texto)))
-            && (perfil === TODOS || u.perfil === perfil));
+            && (perfil === TODOS || u.perfil === perfil)
+            && (estadoFiltro === TODOS || estadoDe(u) === estadoFiltro));
         tabla.mostrar(filtrados, completos.length);
     }
 
@@ -106,7 +136,7 @@ export function montar(contenedor, { api, usuario: sesion }) {
             return;
         }
         const propio = esPropio(u);
-        btnActivo.textContent = u.activo ? '⏸️ Desactivar' : '▶️ Activar';
+        btnActivo.textContent = u.pendiente_aprobacion ? '✅ Aprobar cuenta' : (u.activo ? '⏸️ Desactivar' : '▶️ Activar');
         habilitar(btnReset, !propio, 'Para tu propia cuenta usá "Cambiar contraseña"');
         habilitar(btnActivo, !propio || !u.activo, 'No podés desactivar tu propio usuario');
         habilitar(btnEliminar, !propio, 'No podés eliminar tu propio usuario');
@@ -214,7 +244,7 @@ export function montar(contenedor, { api, usuario: sesion }) {
         const u = tabla.seleccionada;
         if (!u || esPropio(u)) return;
         const ok = await confirmar('Resetear contraseña',
-            `¿Resetear la contraseña de ${u.username} (legajo ${u.legajo})? Se genera una temporal, se quita el bloqueo por intentos fallidos y se cierran sus sesiones abiertas.`,
+            `¿Resetear la contraseña de ${u.username} (legajo ${u.legajo})? Se genera una temporal, se quita el bloqueo por intentos fallidos y sus sesiones abiertas dejan de valer.`,
             { aceptar: 'Resetear' });
         if (!ok) return;
         try {
@@ -230,15 +260,18 @@ export function montar(contenedor, { api, usuario: sesion }) {
         const u = tabla.seleccionada;
         if (!u) return;
         const activar = !u.activo;
-        const ok = await confirmar(activar ? 'Activar usuario' : 'Desactivar usuario',
-            activar
-                ? `¿Activar a ${u.username} (legajo ${u.legajo})? Podrá volver a ingresar.`
-                : `¿Desactivar a ${u.username} (legajo ${u.legajo})? No podrá ingresar y se cierran sus sesiones abiertas.`,
-            { aceptar: activar ? 'Activar' : 'Desactivar', peligro: !activar });
+        const aprobar = !!u.pendiente_aprobacion;
+        const ok = await confirmar(aprobar ? 'Aprobar cuenta' : (activar ? 'Activar usuario' : 'Desactivar usuario'),
+            aprobar
+                ? `¿Aprobar la cuenta de ${u.nombre} ${u.apellido} (usuario ${u.username}, legajo ${u.legajo}, ${u.email ?? 'sin email'})? Podrá ingresar con el perfil ${u.perfil}. Para rechazarla, eliminala.`
+                : activar
+                    ? `¿Activar a ${u.username} (legajo ${u.legajo})? Podrá volver a ingresar.`
+                    : `¿Desactivar a ${u.username} (legajo ${u.legajo})? No podrá ingresar y sus sesiones abiertas dejan de valer.`,
+            { aceptar: aprobar ? 'Aprobar' : (activar ? 'Activar' : 'Desactivar'), peligro: !activar });
         if (!ok) return;
         try {
             await api.post('toggle_activo.php', { legajo: u.legajo, activo: activar });
-            aviso(`Usuario ${u.legajo} ${activar ? 'activado' : 'desactivado'}.`, 'exito');
+            aviso(aprobar ? `Cuenta de ${u.username} aprobada.` : `Usuario ${u.legajo} ${activar ? 'activado' : 'desactivado'}.`, 'exito');
             cargar();
         } catch (error) {
             manejarError(error, 'No se pudo cambiar el estado');

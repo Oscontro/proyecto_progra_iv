@@ -46,6 +46,27 @@ CREATE TABLE `canales_detalle` (
   CONSTRAINT `canales_detalle_ibfk_1` FOREIGN KEY (`id_programacion`) REFERENCES `programacion_canales` (`id_programacion`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Detalle de cada canal programado';
 /*!40101 SET character_set_client = @saved_cs_client */;
+DROP TABLE IF EXISTS `contactos`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `contactos` (
+  `id_contacto` int(11) NOT NULL AUTO_INCREMENT,
+  `nombre` varchar(100) NOT NULL,
+  `email` varchar(150) NOT NULL,
+  `asunto` varchar(150) NOT NULL,
+  `mensaje` text NOT NULL,
+  `id_usuario` int(11) DEFAULT NULL COMMENT 'Usuario logueado que la envió (NULL = visitante)',
+  `mail_enviado` tinyint(1) NOT NULL DEFAULT 0 COMMENT 'Resultado de mail() al recibirla',
+  `leido` tinyint(1) NOT NULL DEFAULT 0,
+  `ip` varchar(45) DEFAULT NULL,
+  `fecha` datetime NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id_contacto`),
+  KEY `idx_fecha` (`fecha`),
+  KEY `idx_leido` (`leido`),
+  KEY `idx_usuario` (`id_usuario`),
+  CONSTRAINT `contactos_ibfk_usuario` FOREIGN KEY (`id_usuario`) REFERENCES `usuarios` (`id_usuario`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Consultas del formulario de contacto';
+/*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `equipo_estado`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
@@ -692,50 +713,15 @@ CREATE TABLE `repuestos` (
   CONSTRAINT `repuestos_ibfk_1` FOREIGN KEY (`id_usuario`) REFERENCES `usuarios` (`id_usuario`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
-DROP TABLE IF EXISTS `sessions`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `sessions` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `usuario_id` int(11) NOT NULL,
-  `token_hash` char(64) NOT NULL,
-  `expires_at` datetime NOT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `token_hash` (`token_hash`),
-  KEY `usuario_id` (`usuario_id`),
-  KEY `idx_token_hash` (`token_hash`),
-  CONSTRAINT `sessions_ibfk_1` FOREIGN KEY (`usuario_id`) REFERENCES `usuarios` (`id_usuario`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
-/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
-/*!50003 SET @saved_col_connection = @@collation_connection */ ;
-/*!50003 SET character_set_client  = utf8mb4 */ ;
-/*!50003 SET character_set_results = utf8mb4 */ ;
-/*!50003 SET collation_connection  = utf8mb4_general_ci */ ;
-/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
-/*!50003 SET sql_mode              = 'NO_AUTO_VALUE_ON_ZERO' */ ;
-DELIMITER ;;
-/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `trg_ultima_sesion` AFTER INSERT ON `sessions` FOR EACH ROW BEGIN
-    UPDATE usuarios
-    SET fecha_ultima_conexion = NEW.created_at
-    WHERE id_usuario = NEW.usuario_id;
-END */;;
-DELIMITER ;
-/*!50003 SET sql_mode              = @saved_sql_mode */ ;
-/*!50003 SET character_set_client  = @saved_cs_client */ ;
-/*!50003 SET character_set_results = @saved_cs_results */ ;
-/*!50003 SET collation_connection  = @saved_col_connection */ ;
 DROP TABLE IF EXISTS `taller_egreso_repuestos`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `taller_egreso_repuestos` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `id_egreso` int(11) NOT NULL,
-  `id_repuesto` int(11) DEFAULT NULL COMMENT 'NULL si el repuesto se dio de baja despu├®s',
+  `id_repuesto` int(11) DEFAULT NULL COMMENT 'NULL si el repuesto se dio de baja después',
   `nombre_repuesto` varchar(100) NOT NULL COMMENT 'Copia del nombre al momento del egreso',
-  `id_taller` int(11) NOT NULL COMMENT 'Taller del que sali├│ el stock',
+  `id_taller` int(11) NOT NULL COMMENT 'Taller del que salió el stock',
   `cantidad` int(11) NOT NULL,
   PRIMARY KEY (`id`),
   KEY `idx_egreso` (`id_egreso`),
@@ -745,7 +731,7 @@ CREATE TABLE `taller_egreso_repuestos` (
   CONSTRAINT `fk_ter_repuesto` FOREIGN KEY (`id_repuesto`) REFERENCES `repuestos` (`id_repuesto`) ON DELETE SET NULL,
   CONSTRAINT `fk_ter_taller` FOREIGN KEY (`id_taller`) REFERENCES `talleres` (`id_taller`),
   CONSTRAINT `chk_ter_cantidad` CHECK (`cantidad` > 0)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Repuestos del cat├ílogo usados en cada egreso de taller';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Repuestos del catálogo usados en cada egreso de taller';
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `taller_egresos`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -964,6 +950,7 @@ CREATE TABLE `usuarios` (
   `es_administrador` tinyint(1) DEFAULT 0,
   `debe_cambiar_clave` tinyint(1) DEFAULT 1 COMMENT 'Obligar cambio en primer login',
   `activo` tinyint(1) DEFAULT 1,
+  `pendiente_aprobacion` tinyint(1) NOT NULL DEFAULT 0 COMMENT 'Registrado desde la portada, a la espera de que un administrador lo apruebe',
   `fecha_creacion` datetime DEFAULT current_timestamp(),
   `fecha_ultima_conexion` datetime DEFAULT NULL,
   `creado_por` int(11) DEFAULT NULL COMMENT 'ID del usuario que lo creó',

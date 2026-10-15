@@ -1,8 +1,8 @@
 // Cliente de la API del Sistema de Inventario (equivalente web de api_client.py).
 //
-// La sesión viaja en una cookie HttpOnly que crea login.php: el JavaScript
-// nunca ve ni guarda el token. Cada pedido lleva X-Requested-With, que la
-// API exige cuando autentica por cookie (protección CSRF).
+// La sesión es la sesión de PHP (cookie HttpOnly que crea ingresar.php):
+// el JavaScript nunca la ve. Cada pedido lleva X-Requested-With, que la
+// API exige (protección CSRF).
 //
 // Formatos de respuesta que conviven en la API:
 //   éxito (nuevo)  -> {"success": true, "data": ...}
@@ -39,7 +39,7 @@ export class ClavePendiente extends ApiError {
 }
 
 // La aplicación se suscribe para reaccionar en un solo lugar
-// (volver al login, forzar el cambio de clave), sin repetirlo en cada pestaña.
+// (ir a la página de sesión vencida, forzar el cambio de clave), sin repetirlo en cada pestaña.
 const oyentes = { sesionExpirada: [], clavePendiente: [] };
 
 function avisar(evento, error) {
@@ -48,7 +48,7 @@ function avisar(evento, error) {
     }
 }
 
-async function pedir(endpoint, { method = 'GET', params = null, datos = null, esLogin = false } = {}) {
+async function pedir(endpoint, { method = 'GET', params = null, datos = null } = {}) {
     const url = new URL(endpoint, API_BASE);
     if (params) {
         for (const [clave, valor] of Object.entries(params)) {
@@ -87,10 +87,6 @@ async function pedir(endpoint, { method = 'GET', params = null, datos = null, es
     const codigo = esObjeto ? (cuerpo.code || null) : null;
 
     if (respuesta.status === 401) {
-        // En el login, un 401 son credenciales incorrectas, no una sesión vencida.
-        if (esLogin) {
-            throw new ApiError(mensaje || 'Usuario o contraseña incorrectos', 401);
-        }
         const error = new SesionExpirada(mensaje);
         avisar('sesionExpirada', error);
         throw error;
@@ -120,17 +116,6 @@ export const api = {
 
     post(endpoint, datos = {}) {
         return pedir(endpoint, { method: 'POST', datos });
-    },
-
-    /** Devuelve el usuario: {id, username, es_admin, debe_cambiar_clave}. */
-    async login(username, password) {
-        const data = await pedir('login.php', {
-            method: 'POST',
-            datos: { username, password },
-            esLogin: true,
-        });
-        // data.token se ignora a propósito: la sesión queda en la cookie HttpOnly.
-        return data.user;
     },
 
     async logout() {

@@ -1,15 +1,12 @@
 <?php
-// Capa de autenticación por token.
-// Se apoya en tu conexion.php (que a su vez incluye config.php).
+// Autenticación de la API JSON con la sesión nativa de PHP ($_SESSION).
 //
-// El token se acepta por dos vías:
-//   - Header "Authorization: Bearer xxxxx"  (cliente de escritorio)
-//   - Cookie HttpOnly SESSION_COOKIE        (frontend web)
-// Cuando llega por cookie se exige además el header X-Requested-With,
-// que un formulario de otro sitio no puede enviar (protección CSRF).
+// El login lo hace la página web/ingresar.php (formulario HTML); la API solo
+// verifica que haya una sesión válida. Cada pedido debe traer además el
+// header X-Requested-With, que un formulario de otro sitio no puede enviar
+// (protección CSRF de la API).
 require_once 'conexion.php';
-
-const SESSION_COOKIE = 'inv_token';
+require_once 'sesion.php';
 
 // Lee el cuerpo JSON de la petición y lo devuelve como array.
 function getJsonInput(): array {
@@ -17,95 +14,26 @@ function getJsonInput(): array {
     return is_array($data) ? $data : [];
 }
 
-// Extrae el token del header "Authorization: Bearer xxxxx".
-function getBearerToken(): ?string {
-    $auth = '';
-    if (function_exists('getallheaders')) {
-        $headers = array_change_key_case(getallheaders(), CASE_LOWER);
-        $auth = $headers['authorization'] ?? '';
+function exigirXRequestedWith(): void {
+    if (($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '') === '') {
+        sendError('Falta el header X-Requested-With', 403);
     }
-    // Fallback: en algunas configuraciones de Apache el header llega por acá.
-    if ($auth === '') {
-        $auth = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
-    }
-    if (preg_match('/Bearer\s+(\S+)/i', $auth, $m)) {
-        return $m[1];
-    }
-    return null;
-}
-
-// Devuelve [token, origen] donde origen es 'header' o 'cookie'.
-function getRequestToken(): array {
-    $token = getBearerToken();
-    if ($token) {
-        return [$token, 'header'];
-    }
-    $cookie = $_COOKIE[SESSION_COOKIE] ?? '';
-    if ($cookie !== '') {
-        return [$cookie, 'cookie'];
-    }
-    return [null, null];
-}
-
-// La cookie solo viaja a la carpeta de la API.
-function sessionCookiePath(): string {
-    return rtrim(str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '/')), '/') . '/';
-}
-
-function setSessionCookie(string $token, int $expira): void {
-    setcookie(SESSION_COOKIE, $token, [
-        'expires'  => $expira,
-        'path'     => sessionCookiePath(),
-        'secure'   => !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off',
-        'httponly' => true,
-        'samesite' => 'Strict',
-    ]);
-}
-
-function clearSessionCookie(): void {
-    setcookie(SESSION_COOKIE, '', [
-        'expires'  => time() - 3600,
-        'path'     => sessionCookiePath(),
-        'httponly' => true,
-        'samesite' => 'Strict',
-    ]);
 }
 
 // ─────────────────────────────────────────────────────────
 // Poné esto al inicio de CUALQUIER endpoint que requiera login.
-// Devuelve el usuario, o corta con 401.
+// Devuelve el usuario ['id', 'username', 'nombre', 'apellido',
+// 'es_administrador', 'debe_cambiar_clave'], o corta con 401.
 //
 // Si el usuario tiene una clave temporal (debe_cambiar_clave = 1) se
 // corta con 403, salvo en los endpoints que lo permiten explícitamente
-// (cambiar_clave.php, me.php, logout.php).
+// (cambiar_clave.php, me.php).
 // ─────────────────────────────────────────────────────────
 function requireAuth(bool $permitirClavePendiente = false): array {
-    [$token, $origen] = getRequestToken();
-    if (!$token) {
-        sendError('Falta el token', 401);
-    }
-    if ($origen === 'cookie' && ($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '') === '') {
-        sendError('Falta el header X-Requested-With', 403);
-    }
-
-    $pdo  = getConnection();
-    $stmt = $pdo->prepare(
-        "SELECT u.id_usuario AS id, u.username, u.es_administrador, u.debe_cambiar_clave
-           FROM sessions s
-           JOIN usuarios u ON u.id_usuario = s.usuario_id
-          WHERE s.token_hash = ?
-            AND s.expires_at > NOW()
-            AND u.activo = 1"
-    );
-    // En la base guardamos el hash del token, así que hasheamos el que llega.
-    $stmt->execute([hash('sha256', $token)]);
-    $user = $stmt->fetch();
-
+    exigirXRequestedWith();
+    $user = usuarioDeSesion(getConnection());
     if (!$user) {
-        if ($origen === 'cookie') {
-            clearSessionCookie();
-        }
-        sendError('Token inválido o expirado', 401);
+        sendError('La sesión no es válida o venció', 401);
     }
     if ($user['debe_cambiar_clave'] && !$permitirClavePendiente) {
         sendError('Debés cambiar tu contraseña antes de continuar', 403,
@@ -119,8 +47,8 @@ function requireAuth(bool $permitirClavePendiente = false): array {
 // Corta con 403 (autenticado, pero sin permiso) si no lo es.
 // ─────────────────────────────────────────────────────────
 function requireAdmin(): array {
-    $user = requireAuth();          // primero: ¿está logueado?
-    if (!$user['es_administrador']) {       // después: ¿es admin?
+    $user = requireAuth();
+    if (!$user['es_administrador']) {
         sendError('No tenés permisos para esta acción', 403);
     }
     return $user;
