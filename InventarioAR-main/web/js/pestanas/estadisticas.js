@@ -1,8 +1,8 @@
 // Pestaña Estadísticas (equivalente a tabs/tab_estadisticas.py).
 //
 // Diferencias deliberadas con el cliente de escritorio:
-//  - "Repuestos utilizados" usa datos reales (estadistica_repuestos.php);
-//    el cliente de escritorio mostraba valores aleatorios de ejemplo.
+//  - "Repuestos utilizados" usa datos reales (estadistica_repuestos.php),
+//    sumando unidades; el cliente de escritorio mostraba valores aleatorios.
 //  - Cada gráfico usa un solo color: son conteos de una sola serie y la
 //    identidad la da la etiqueta (el escritorio coloreaba cada barra distinto).
 
@@ -241,7 +241,7 @@ export function montar(contenedor, { api }) {
 
             tituloRepuestos.textContent = mod ? `Repuestos utilizados · ${mod}` : 'Repuestos utilizados';
             barrasHorizontales(repuestos,
-                contar(datos.repuestos.filter((u) => coincide(u) && u.modelo === mod), (u) => u.repuesto),
+                contar(datos.repuestos.filter((u) => coincide(u) && u.modelo === mod), (u) => u.repuesto, (u) => Number(u.cantidad || 1)),
                 { unidad: 'usos', vacio: datos.repuestos.length
                     ? 'Sin repuestos utilizados para los filtros elegidos'
                     : 'Todavía no hay egresos de taller con repuestos registrados' });

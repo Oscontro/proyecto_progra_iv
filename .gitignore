@@ -12,3 +12,4 @@ InventarioAR-main/php/config.local.php
 # Solo se versiona el esquema sin datos.
 *.sql
 !InventarioAR-main/db/schema.sql
+!InventarioAR-main/db/migraciones/*.sql

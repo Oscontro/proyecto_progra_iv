@@ -490,8 +490,10 @@ th[aria-sort="descending"] .th-orden::after { content: ' ▼'; opacity: 1; }
     color: var(--azul-oscuro);
     line-height: 1.6;
 }
-.ficha dt { display: inline; font-weight: bold; white-space: nowrap; }
-.ficha dd { display: inline; margin: 0 1rem 0 0.3rem; white-space: nowrap; }
+.ficha { display: flex; flex-wrap: wrap; gap: 0.2rem 1.2rem; }
+.ficha-par { white-space: nowrap; }
+.ficha dt { display: inline; font-weight: bold; }
+.ficha dd { display: inline; margin: 0 0 0 0.3rem; }
 .modal-medio { width: min(640px, calc(100vw - 2rem)); }
 .modal-cuerpo { max-height: calc(100vh - 220px); overflow-y: auto; }
 
@@ -524,3 +526,10 @@ th[aria-sort="descending"] .th-orden::after { content: ' ▼'; opacity: 1; }
     border-radius: var(--radio);
 }
 .lista-modelos .casilla { margin: 0; font-size: 0.9rem; }
+
+/* Egreso de taller: repuestos del catálogo con cantidad */
+.repuestos-egreso { display: block; }
+.repuesto-egreso { display: grid; grid-template-columns: 1fr 90px; gap: 0.6rem; align-items: center; padding: 0.25rem 0; border-bottom: 1px solid #eceff1; }
+.repuesto-egreso label { margin: 0; font-weight: normal; }
+.repuesto-egreso small { color: var(--tinta-tenue); }
+.repuesto-egreso input[type="number"] { min-height: 34px; }

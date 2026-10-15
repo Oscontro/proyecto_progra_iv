@@ -7,8 +7,10 @@
 //
 // Diferencias deliberadas con el escritorio:
 //  - El egreso funciona: en el escritorio el diálogo dependía de un servicio
-//    de stock que nunca se conectó y fallaba al abrirse. Acá usa
-//    egreso_taller.php con la lista de repuestos y tareas que espera la base.
+//    de stock que nunca se conectó y fallaba al abrirse.
+//  - Los repuestos del egreso son los del catálogo vinculados al modelo del
+//    equipo, con cantidad; salen del stock del taller y pasan a "en uso"
+//    (migración 2026-10-14). "Otros" queda como texto y no toca stock.
 //  - Los botones se habilitan según el estado: Ingreso solo para
 //    "No ingresado"; Actualizar estado y Egreso solo para equipos ingresados.
 //  - El texto automático para correo se genera a partir del egreso, se puede
@@ -52,21 +54,6 @@ const TAREAS_EGRESO = [
     { valor: 'tarea_verificacion_rf', texto: 'Verificación RF' },
     { valor: 'tarea_reprogramacion', texto: 'Reprogramación' },
     { valor: 'tarea_otros', texto: 'Otros' },
-];
-const REPUESTOS_EGRESO = [
-    { valor: 'repuesto_potenciometro', texto: 'Potenciómetro' },
-    { valor: 'repuesto_carcaza', texto: 'Carcaza' },
-    { valor: 'repuesto_switch_ptt', texto: 'Switch PTT' },
-    { valor: 'repuesto_plastico_ptt', texto: 'Plástico PTT' },
-    { valor: 'repuesto_goma_ptt', texto: 'Goma PTT' },
-    { valor: 'repuesto_display', texto: 'Display' },
-    { valor: 'repuesto_parlante', texto: 'Parlante' },
-    { valor: 'repuesto_microfono', texto: 'Micrófono' },
-    { valor: 'repuesto_antena', texto: 'Antena' },
-    { valor: 'repuesto_bateria', texto: 'Batería' },
-    { valor: 'repuesto_clip_cintura', texto: 'Clip de cintura' },
-    { valor: 'repuesto_conector_rf', texto: 'Conector RF' },
-    { valor: 'repuesto_otros', texto: 'Otros' },
 ];
 
 export function montar(contenedor, { api }) {
@@ -244,27 +231,43 @@ export function montar(contenedor, { api }) {
         select.focus();
     }
 
-    function egresar() {
+    async function egresar() {
         const equipo = tabla.seleccionada;
         if (!equipo || equipo.estado_taller === NO_INGRESADO || !equipo.id_ingreso) return;
+
+        // Repuestos del catálogo vinculados al modelo, con el stock de este taller.
+        let catalogo;
+        try {
+            catalogo = await api.get('repuestos_equipo.php', { id_ingreso: equipo.id_ingreso });
+        } catch (error) {
+            manejarError(error, 'No se pudieron cargar los repuestos del equipo');
+            return;
+        }
 
         const guia = el('input', { type: 'text', id: 'tal-egr-guia', placeholder: 'Opcional', autocomplete: 'off' });
         const tareas = grupoCasillas('Tareas realizadas', 'tareas', TAREAS_EGRESO);
         const detalleTareas = el('input', { type: 'text', id: 'tal-egr-det-tareas', placeholder: 'Detalle de otras tareas…', disabled: true });
-        const repuestos = grupoCasillas('Repuestos utilizados', 'repuestos', REPUESTOS_EGRESO);
-        const detalleRepuestos = el('input', { type: 'text', id: 'tal-egr-det-rep', placeholder: 'Detalle de otros repuestos…', disabled: true });
+        const repuestos = selectorRepuestos(catalogo);
+        const otros = el('input', { type: 'checkbox', id: 'tal-egr-otros' });
+        const detalleOtros = el('input', { type: 'text', id: 'tal-egr-det-rep', placeholder: 'Detalle de otros repuestos (no descuenta stock)…', disabled: true });
         const texto = el('textarea', { id: 'tal-egr-texto', rows: 7 });
         let textoEditado = false;
 
         habilitarDetalle(tareas, 'tarea_otros', detalleTareas);
-        habilitarDetalle(repuestos, 'repuesto_otros', detalleRepuestos);
+        otros.addEventListener('change', () => {
+            detalleOtros.disabled = !otros.checked;
+            if (!otros.checked) detalleOtros.value = '';
+        });
 
         // El texto para correo se arma solo, hasta que el usuario lo edite a mano.
         const regenerar = () => {
-            if (!textoEditado) texto.value = textoCorreo(equipo, guia.value, tareas, detalleTareas.value, repuestos, detalleRepuestos.value);
+            if (!textoEditado) {
+                texto.value = textoCorreo(equipo, guia.value, tareas, detalleTareas.value,
+                    repuestos.usados(), otros.checked ? detalleOtros.value : null);
+            }
         };
         texto.addEventListener('input', () => { textoEditado = true; });
-        for (const nodo of [guia, detalleTareas, detalleRepuestos, ...tareas.casillas, ...repuestos.casillas]) {
+        for (const nodo of [guia, detalleTareas, detalleOtros, otros, ...tareas.casillas, ...repuestos.campos]) {
             nodo.addEventListener('input', regenerar);
             nodo.addEventListener('change', regenerar);
         }
@@ -274,14 +277,14 @@ export function montar(contenedor, { api }) {
             fichaEquipo(equipo),
             el('label', { for: guia.id }, 'Número de guía'), guia,
             tareas.nodo, detalleTareas,
-            repuestos.nodo, detalleRepuestos,
+            repuestos.nodo,
+            el('label', { class: 'casilla' }, otros, ' Otros repuestos (fuera del catálogo)'), detalleOtros,
             el('label', { for: texto.id }, 'Texto para correo (queda en el historial del equipo)'), texto,
         ], {
             textoAceptar: 'Guardar egreso',
             ancho: 'medio',
             alAceptar: async () => {
                 const marcadasTareas = tareas.marcadas();
-                const marcadosRepuestos = repuestos.marcadas();
                 if (!marcadasTareas.length) {
                     aviso('Debe seleccionar al menos una tarea.', 'error');
                     return false;
@@ -291,9 +294,14 @@ export function montar(contenedor, { api }) {
                     detalleTareas.focus();
                     return false;
                 }
-                if (marcadosRepuestos.includes('repuesto_otros') && !detalleRepuestos.value.trim()) {
+                const problema = repuestos.validar();
+                if (problema) {
+                    aviso(problema, 'error');
+                    return false;
+                }
+                if (otros.checked && !detalleOtros.value.trim()) {
                     aviso("Marcó 'Otros' en repuestos pero no escribió el detalle.", 'error');
-                    detalleRepuestos.focus();
+                    detalleOtros.focus();
                     return false;
                 }
                 try {
@@ -304,8 +312,9 @@ export function montar(contenedor, { api }) {
                         numero_guia: guia.value.trim(),
                         elementos_tareas: marcadasTareas,
                         detalle_tareas: detalleTareas.value.trim(),
-                        elementos_repuestos: marcadosRepuestos,
-                        detalle_otros: detalleRepuestos.value.trim(),
+                        repuestos_usados: repuestos.usados().map((u) => ({ id_repuesto: u.id_repuesto, cantidad: u.cantidad })),
+                        elementos_repuestos: otros.checked ? ['repuesto_otros'] : [],
+                        detalle_otros: detalleOtros.value.trim(),
                         texto_email_informe: texto.value.trim(),
                     });
                 } catch (error) {
@@ -335,7 +344,8 @@ export function montar(contenedor, { api }) {
 // ═══════════════ Auxiliares ═══════════════
 
 function fichaEquipo(equipo) {
-    const dato = (t, v) => [el('dt', {}, t), el('dd', {}, textoCelda(v) || '-')];
+    // Cada par etiqueta/valor va junto en un <div> (válido dentro de <dl>) para que corte de línea entre pares.
+    const dato = (t, v) => el('div', { class: 'ficha-par' }, el('dt', {}, t), el('dd', {}, textoCelda(v) || '-'));
     return el('dl', { class: 'ficha' },
         dato('Tipo:', equipo.tipo), dato('Marca:', equipo.marca), dato('Modelo:', equipo.modelo_equipo),
         dato('N° de serie:', equipo.serie), dato('Taller:', equipo.taller), dato('Estado:', equipo.estado_taller));
@@ -349,13 +359,48 @@ function habilitarDetalle(grupo, valorOtros, campo) {
     });
 }
 
-function textoCorreo(equipo, guia, tareas, detalleTareas, repuestos, detalleRepuestos) {
-    const nombres = (grupo, opciones, detalle) => grupo.marcadas().map((v) => {
-        const texto = opciones.find((o) => o.valor === v).texto;
-        return v.endsWith('_otros') && detalle.trim() ? `${texto}: ${detalle.trim()}` : texto;
+// Repuestos del catálogo con un campo de cantidad cada uno (0 = no se usó).
+function selectorRepuestos({ taller, repuestos }) {
+    const filas = repuestos.map((r) => ({
+        r,
+        campo: el('input', {
+            type: 'number', min: '0', max: String(r.stock_taller), step: '1', value: '0',
+            id: `tal-egr-rep-${r.id_repuesto}`, disabled: r.stock_taller === 0,
+        }),
+    }));
+    const nodo = el('fieldset', { class: 'casillas repuestos-egreso' },
+        el('legend', {}, `Repuestos utilizados (stock de ${taller})`),
+        filas.length
+            ? filas.map(({ r, campo }) => el('div', { class: 'repuesto-egreso' },
+                el('label', { for: campo.id }, r.nombre,
+                    el('small', {}, ` ${r.numero_parte || ''} · disponible: ${r.stock_taller}`)),
+                campo))
+            : el('p', { class: 'texto-suave' }, 'Este modelo no tiene repuestos vinculados en el catálogo.'));
+
+    return {
+        nodo,
+        campos: filas.map((f) => f.campo),
+        usados: () => filas
+            .map(({ r, campo }) => ({ ...r, cantidad: Number(campo.value) }))
+            .filter((u) => u.cantidad > 0),
+        validar() {
+            for (const { r, campo } of filas) {
+                const n = Number(campo.value);
+                if (!Number.isInteger(n) || n < 0) return `La cantidad de "${r.nombre}" tiene que ser un entero mayor o igual a 0.`;
+                if (n > r.stock_taller) return `No alcanza el stock de "${r.nombre}" en ${taller} (disponible: ${r.stock_taller}).`;
+            }
+            return null;
+        },
+    };
+}
+
+function textoCorreo(equipo, guia, tareas, detalleTareas, usados, detalleOtros) {
+    const listaTareas = tareas.marcadas().map((v) => {
+        const texto = TAREAS_EGRESO.find((o) => o.valor === v).texto;
+        return v === 'tarea_otros' && detalleTareas.trim() ? `${texto}: ${detalleTareas.trim()}` : texto;
     });
-    const listaTareas = nombres(tareas, TAREAS_EGRESO, detalleTareas);
-    const listaRepuestos = nombres(repuestos, REPUESTOS_EGRESO, detalleRepuestos);
+    const listaRepuestos = usados.map((u) => `${u.nombre} x${u.cantidad}`);
+    if (detalleOtros !== null) listaRepuestos.push(`Otros: ${detalleOtros.trim()}`);
     return [
         `Equipo: ${textoCelda(equipo.tipo)} ${textoCelda(equipo.marca)} ${textoCelda(equipo.modelo_equipo)} - N° de serie ${textoCelda(equipo.serie)}`,
         `Taller: ${textoCelda(equipo.taller)}`,

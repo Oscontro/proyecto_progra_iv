@@ -13,15 +13,18 @@ import { el } from './ui.js';
 const formatoNumero = new Intl.NumberFormat('es-AR');
 const formatoPorcentaje = new Intl.NumberFormat('es-AR', { style: 'percent', maximumFractionDigits: 1 });
 
-/** Cuenta ocurrencias: contar(lista, e => e.tipo) -> Map(tipo -> cantidad). */
-export function contar(lista, clave) {
+/**
+ * Cuenta ocurrencias: contar(lista, e => e.tipo) -> Map(tipo -> cantidad).
+ * Con `peso`, suma ese valor en vez de contar 1 (p. ej. unidades por fila).
+ */
+export function contar(lista, clave, peso = () => 1) {
     const mapa = new Map();
     for (const item of lista) {
         const k = clave(item);
         if (k === null || k === undefined || k === '') {
             continue;
         }
-        mapa.set(k, (mapa.get(k) || 0) + 1);
+        mapa.set(k, (mapa.get(k) || 0) + peso(item));
     }
     return mapa;
 }

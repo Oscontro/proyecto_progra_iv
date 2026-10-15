@@ -727,6 +727,26 @@ DELIMITER ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
 /*!50003 SET character_set_results = @saved_cs_results */ ;
 /*!50003 SET collation_connection  = @saved_col_connection */ ;
+DROP TABLE IF EXISTS `taller_egreso_repuestos`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `taller_egreso_repuestos` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `id_egreso` int(11) NOT NULL,
+  `id_repuesto` int(11) DEFAULT NULL COMMENT 'NULL si el repuesto se dio de baja despu├®s',
+  `nombre_repuesto` varchar(100) NOT NULL COMMENT 'Copia del nombre al momento del egreso',
+  `id_taller` int(11) NOT NULL COMMENT 'Taller del que sali├│ el stock',
+  `cantidad` int(11) NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_egreso` (`id_egreso`),
+  KEY `idx_repuesto` (`id_repuesto`),
+  KEY `fk_ter_taller` (`id_taller`),
+  CONSTRAINT `fk_ter_egreso` FOREIGN KEY (`id_egreso`) REFERENCES `taller_egresos` (`id_egreso`) ON DELETE CASCADE,
+  CONSTRAINT `fk_ter_repuesto` FOREIGN KEY (`id_repuesto`) REFERENCES `repuestos` (`id_repuesto`) ON DELETE SET NULL,
+  CONSTRAINT `fk_ter_taller` FOREIGN KEY (`id_taller`) REFERENCES `talleres` (`id_taller`),
+  CONSTRAINT `chk_ter_cantidad` CHECK (`cantidad` > 0)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Repuestos del cat├ílogo usados en cada egreso de taller';
+/*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `taller_egresos`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
@@ -768,212 +788,6 @@ CREATE TABLE `taller_egresos` (
   CONSTRAINT `taller_egresos_ibfk_2` FOREIGN KEY (`usuario_egreso`) REFERENCES `usuarios` (`id_usuario`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Egresos de equipos del taller';
 /*!40101 SET character_set_client = @saved_cs_client */;
-/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
-/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
-/*!50003 SET @saved_col_connection = @@collation_connection */ ;
-/*!50003 SET character_set_client  = utf8mb4 */ ;
-/*!50003 SET character_set_results = utf8mb4 */ ;
-/*!50003 SET collation_connection  = utf8mb4_general_ci */ ;
-/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
-/*!50003 SET sql_mode              = 'NO_AUTO_VALUE_ON_ZERO' */ ;
-DELIMITER ;;
-/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `trg_after_insert_restar_stock_repuestos` AFTER INSERT ON `taller_egresos` FOR EACH ROW BEGIN
-
-    
-    IF NEW.repuesto_potenciometro = 1 THEN
-        UPDATE repuestos r
-        JOIN modelo_repuesto mr ON r.id_repuesto = mr.id_repuesto
-        JOIN equipos e ON e.modelo = mr.id_modelo
-        JOIN taller_ingresos tai ON tai.id_equipo = e.id_equipo
-        SET r.stock_actual = r.stock_actual - 1
-        WHERE tai.id_ingreso = NEW.id_ingreso
-          AND r.nombre = 'POTENCIOMETRO'
-          AND r.stock_actual > 0;
-    END IF;
-    
-    
-    IF NEW.repuesto_carcaza = 1 THEN
-        UPDATE repuestos r
-        JOIN modelo_repuesto mr ON r.id_repuesto = mr.id_repuesto
-        JOIN equipos e ON e.modelo = mr.id_modelo
-        JOIN taller_ingresos tai ON tai.id_equipo = e.id_equipo
-        SET r.stock_actual = r.stock_actual - 1
-        WHERE tai.id_ingreso = NEW.id_ingreso
-          AND r.nombre = 'CARCAZA'
-          AND r.stock_actual > 0;
-    END IF;
-    
-    
-    IF NEW.repuesto_switch_ptt = 1 THEN
-        UPDATE repuestos r
-        JOIN modelo_repuesto mr ON r.id_repuesto = mr.id_repuesto
-        JOIN equipos e ON e.modelo = mr.id_modelo
-        JOIN taller_ingresos tai ON tai.id_equipo = e.id_equipo
-        SET r.stock_actual = r.stock_actual - 1
-        WHERE tai.id_ingreso = NEW.id_ingreso
-          AND r.nombre = 'SWITCH PTT'
-          AND r.stock_actual > 0;
-    END IF;
-    
-    
-    IF NEW.repuesto_plastico_ptt = 1 THEN
-        UPDATE repuestos r
-        JOIN modelo_repuesto mr ON r.id_repuesto = mr.id_repuesto
-        JOIN equipos e ON e.modelo = mr.id_modelo
-        JOIN taller_ingresos tai ON tai.id_equipo = e.id_equipo
-        SET r.stock_actual = r.stock_actual - 1
-        WHERE tai.id_ingreso = NEW.id_ingreso
-          AND r.nombre = 'PLASTICO/BISEL PTT'
-          AND r.stock_actual > 0;
-    END IF;
-    
-    
-    IF NEW.repuesto_goma_ptt = 1 THEN
-        UPDATE repuestos r
-        JOIN modelo_repuesto mr ON r.id_repuesto = mr.id_repuesto
-        JOIN equipos e ON e.modelo = mr.id_modelo
-        JOIN taller_ingresos tai ON tai.id_equipo = e.id_equipo
-        SET r.stock_actual = r.stock_actual - 1
-        WHERE tai.id_ingreso = NEW.id_ingreso
-          AND r.nombre = 'GOMA PTT'
-          AND r.stock_actual > 0;
-    END IF;
-    
-    
-    IF NEW.repuesto_display = 1 THEN
-        UPDATE repuestos r
-        JOIN modelo_repuesto mr ON r.id_repuesto = mr.id_repuesto
-        JOIN equipos e ON e.modelo = mr.id_modelo
-        JOIN taller_ingresos tai ON tai.id_equipo = e.id_equipo
-        SET r.stock_actual = r.stock_actual - 1
-        WHERE tai.id_ingreso = NEW.id_ingreso
-          AND r.nombre = 'DISPLAY'
-          AND r.stock_actual > 0;
-    END IF;
-    
-    
-    IF NEW.repuesto_parlante = 1 THEN
-        UPDATE repuestos r
-        JOIN modelo_repuesto mr ON r.id_repuesto = mr.id_repuesto
-        JOIN equipos e ON e.modelo = mr.id_modelo
-        JOIN taller_ingresos tai ON tai.id_equipo = e.id_equipo
-        SET r.stock_actual = r.stock_actual - 1
-        WHERE tai.id_ingreso = NEW.id_ingreso
-          AND r.nombre = 'PARLANTE'
-          AND r.stock_actual > 0;
-    END IF;
-    
-    
-    IF NEW.repuesto_microfono = 1 THEN
-        UPDATE repuestos r
-        JOIN modelo_repuesto mr ON r.id_repuesto = mr.id_repuesto
-        JOIN equipos e ON e.modelo = mr.id_modelo
-        JOIN taller_ingresos tai ON tai.id_equipo = e.id_equipo
-        SET r.stock_actual = r.stock_actual - 1
-        WHERE tai.id_ingreso = NEW.id_ingreso
-          AND r.nombre = 'MICROFONO'
-          AND r.stock_actual > 0;
-    END IF;
-    
-    
-    IF NEW.repuesto_antena = 1 THEN
-        UPDATE repuestos r
-        JOIN modelo_repuesto mr ON r.id_repuesto = mr.id_repuesto
-        JOIN equipos e ON e.modelo = mr.id_modelo
-        JOIN taller_ingresos tai ON tai.id_equipo = e.id_equipo
-        SET r.stock_actual = r.stock_actual - 1
-        WHERE tai.id_ingreso = NEW.id_ingreso
-          AND r.nombre = 'ANTENA'
-          AND r.stock_actual > 0;
-    END IF;
-    
-    
-    IF NEW.repuesto_bateria = 1 THEN
-        UPDATE repuestos r
-        JOIN modelo_repuesto mr ON r.id_repuesto = mr.id_repuesto
-        JOIN equipos e ON e.modelo = mr.id_modelo
-        JOIN taller_ingresos tai ON tai.id_equipo = e.id_equipo
-        SET r.stock_actual = r.stock_actual - 1
-        WHERE tai.id_ingreso = NEW.id_ingreso
-          AND r.nombre = 'BATERIA'
-          AND r.stock_actual > 0;
-    END IF;
-    
-    
-    IF NEW.repuesto_clip_cintura = 1 THEN
-        UPDATE repuestos r
-        JOIN modelo_repuesto mr ON r.id_repuesto = mr.id_repuesto
-        JOIN equipos e ON e.modelo = mr.id_modelo
-        JOIN taller_ingresos tai ON tai.id_equipo = e.id_equipo
-        SET r.stock_actual = r.stock_actual - 1
-        WHERE tai.id_ingreso = NEW.id_ingreso
-          AND r.nombre = 'CLIP DE CINTURA'
-          AND r.stock_actual > 0;
-    END IF;
-    
-    
-    IF NEW.repuesto_conector_rf = 1 THEN
-        UPDATE repuestos r
-        JOIN modelo_repuesto mr ON r.id_repuesto = mr.id_repuesto
-        JOIN equipos e ON e.modelo = mr.id_modelo
-        JOIN taller_ingresos tai ON tai.id_equipo = e.id_equipo
-        SET r.stock_actual = r.stock_actual - 1
-        WHERE tai.id_ingreso = NEW.id_ingreso
-          AND r.nombre = 'CONECTOR RF'
-          AND r.stock_actual > 0;
-    END IF;
-END */;;
-DELIMITER ;
-/*!50003 SET sql_mode              = @saved_sql_mode */ ;
-/*!50003 SET character_set_client  = @saved_cs_client */ ;
-/*!50003 SET character_set_results = @saved_cs_results */ ;
-/*!50003 SET collation_connection  = @saved_col_connection */ ;
-/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
-/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
-/*!50003 SET @saved_col_connection = @@collation_connection */ ;
-/*!50003 SET character_set_client  = utf8mb4 */ ;
-/*!50003 SET character_set_results = utf8mb4 */ ;
-/*!50003 SET collation_connection  = utf8mb4_general_ci */ ;
-/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
-/*!50003 SET sql_mode              = 'NO_AUTO_VALUE_ON_ZERO' */ ;
-DELIMITER ;;
-/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `trg_historial_repuestos` AFTER INSERT ON `taller_egresos` FOR EACH ROW BEGIN
-  INSERT INTO historial_equipos (
-    id_equipo,
-    usuario_evento,
-    tipo_evento,
-    observaciones
-  )
-  SELECT
-    ti.id_equipo,
-    NEW.usuario_egreso,
-    'EGRESO_TALLER_REPUESTOS',
-    CONCAT(
-      'REPUESTOS UTILIZADOS: ',
-      CONCAT_WS(', ',
-        IF(NEW.repuesto_potenciometro, 'potenciometro', NULL),
-        IF(NEW.repuesto_carcaza, 'carcaza', NULL),
-        IF(NEW.repuesto_switch_ptt, 'switch ptt', NULL),
-        IF(NEW.repuesto_plastico_ptt, 'plastico ptt', NULL),
-        IF(NEW.repuesto_goma_ptt, 'goma ptt', NULL),
-        IF(NEW.repuesto_display, 'display', NULL),
-        IF(NEW.repuesto_parlante, 'parlante', NULL),
-        IF(NEW.repuesto_microfono, 'microfono', NULL),
-        IF(NEW.repuesto_antena, 'antena', NULL),
-        IF(NEW.repuesto_bateria, 'bateria', NULL),
-        IF(NEW.repuesto_clip_cintura, 'clip cintura', NULL),
-        IF(NEW.repuesto_conector_rf, 'conector rf', NULL),
-        IF(NEW.repuesto_otros, CONCAT('otros: ', IFNULL(NEW.detalle_otros_repuestos, '')), NULL)
-      )
-    )
-  FROM taller_ingresos ti
-  WHERE ti.id_ingreso = NEW.id_ingreso;
-END */;;
-DELIMITER ;
-/*!50003 SET sql_mode              = @saved_sql_mode */ ;
-/*!50003 SET character_set_client  = @saved_cs_client */ ;
-/*!50003 SET character_set_results = @saved_cs_results */ ;
-/*!50003 SET collation_connection  = @saved_col_connection */ ;
 /*!50003 SET @saved_cs_client      = @@character_set_client */ ;
 /*!50003 SET @saved_cs_results     = @@character_set_results */ ;
 /*!50003 SET @saved_col_connection = @@collation_connection */ ;
