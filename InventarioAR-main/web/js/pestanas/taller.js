@@ -23,6 +23,12 @@ import { verHistorialEquipo } from '../historial.js';
 
 const NO_INGRESADO = 'No ingresado';
 const TODOS = '';
+const SIN_SELECCION = 'Seleccioná un equipo de la tabla';
+
+function habilitar(boton, habilitado, motivo) {
+    boton.disabled = !habilitado;
+    boton.title = habilitado ? '' : motivo;
+}
 
 const COLUMNAS = [
     { clave: 'tipo', titulo: 'Tipo' },
@@ -76,10 +82,12 @@ export function montar(contenedor, { api }) {
         unidad: 'equipos',
         alSeleccionar: (fila) => {
             const ingresado = fila && fila.estado_taller !== NO_INGRESADO;
-            btnIngreso.disabled = !fila || fila.estado_taller !== NO_INGRESADO;
-            btnHistorial.disabled = !fila;
-            btnEstado.disabled = !ingresado;
-            btnEgreso.disabled = !ingresado || !fila.id_ingreso;
+            // Cada botón deshabilitado explica por qué (tooltip).
+            habilitar(btnIngreso, fila && fila.estado_taller === NO_INGRESADO,
+                fila ? `Solo para equipos en estado "${NO_INGRESADO}" (este está "${fila.estado_taller}")` : SIN_SELECCION);
+            habilitar(btnHistorial, !!fila, SIN_SELECCION);
+            habilitar(btnEstado, ingresado, fila ? 'Primero hay que registrar el ingreso a taller' : SIN_SELECCION);
+            habilitar(btnEgreso, ingresado && !!fila.id_ingreso, fila ? 'Primero hay que registrar el ingreso a taller' : SIN_SELECCION);
         },
         alActivar: verHistorial,
     });

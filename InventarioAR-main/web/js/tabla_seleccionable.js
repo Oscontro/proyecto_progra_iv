@@ -1,5 +1,5 @@
 // Tabla con selección de una fila, orden por columna y navegación por teclado.
-// La usan Inventario y Papelera (equivale a los QTableWidget de selección
+// La usan Inventario, Papelera, Taller y Repuestos (equivale a los QTableWidget de selección
 // por filas del cliente de escritorio).
 //
 //   const t = tablaSeleccionable({
@@ -85,12 +85,20 @@ export function tablaSeleccionable({ columnas, etiqueta, unidad = 'filas', alSel
                 total ? 'Ningún registro coincide con los filtros' : 'Sin datos')));
         }
         cuerpo.replaceChildren(fragmento);
-        contador.textContent = `Mostrando ${filas.length} de ${total} ${unidad}`;
         seleccionar(filas.includes(seleccionada) ? seleccionada : null);
+    }
+
+    // Contador + pista: mientras no haya fila elegida, se indica cómo habilitar las acciones.
+    function actualizarContador() {
+        contador.replaceChildren(`Mostrando ${filas.length} de ${total} ${unidad}`,
+            !seleccionada && filas.length
+                ? el('span', { class: 'pista' }, ' · Seleccioná una fila para habilitar las acciones')
+                : '');
     }
 
     function seleccionar(fila) {
         seleccionada = fila;
+        actualizarContador();
         for (const tr of cuerpo.querySelectorAll('tr[data-indice]')) {
             const elegida = filas[Number(tr.dataset.indice)] === fila;
             tr.classList.toggle('seleccionada', elegida);

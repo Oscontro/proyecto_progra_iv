@@ -50,7 +50,15 @@ h1, h2 { margin: 0 0 0.75rem; line-height: 1.2; }
     cursor: pointer;
     transition: background-color 0.15s;
 }
-.btn:disabled { opacity: 0.6; cursor: progress; }
+.btn:disabled,
+.btn:disabled:hover {
+    background: #e0e4e7;
+    color: #8a979e;
+    border-color: #e0e4e7;
+    box-shadow: none;
+    cursor: not-allowed;
+}
+[aria-busy="true"] .btn:disabled { cursor: progress; }
 .btn-primario { background: var(--azul); color: #fff; }
 .btn-primario:hover:not(:disabled) { background: var(--azul-oscuro); }
 .btn-secundario { background: var(--superficie); color: var(--texto); border: 1px solid var(--borde); }
@@ -434,7 +442,14 @@ select:disabled { opacity: 0.6; }
 .tabla-alta { max-height: min(60vh, 640px); }
 .tabla-seleccionable tbody tr[data-indice] { cursor: pointer; }
 .tabla-seleccionable tbody tr[data-indice]:hover { background: var(--azul-claro); }
-.tabla-seleccionable tbody tr.seleccionada { background: #bbdefb; color: var(--azul-oscuro); }
+.tabla-seleccionable tbody tr.seleccionada,
+.tabla-seleccionable tbody tr.seleccionada:hover {
+    background: #90caf9;
+    color: #0b2f63;
+    font-weight: bold;
+    box-shadow: inset 4px 0 0 var(--azul);
+}
+.contador .pista { color: var(--azul-oscuro); font-weight: bold; }
 .tabla-contenedor:focus-visible { outline-offset: -3px; }
 .th-orden {
     width: 100%;
