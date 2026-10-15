@@ -50,6 +50,12 @@ $pdo->prepare(
     "INSERT INTO sessions (usuario_id, token_hash, expires_at) VALUES (?, ?, ?)"
 )->execute([$user['id_usuario'], $token_hash, $expires_at]);
 
+// Limpieza: las sesiones vencidas ya no sirven y si no se borran se acumulan.
+$pdo->exec("DELETE FROM sessions WHERE expires_at < NOW()");
+
+// El frontend web usa la cookie HttpOnly; el cliente de escritorio, el token del cuerpo.
+setSessionCookie($token, strtotime($expires_at));
+
 // El login solo VERIFICA y avisa. NO cambia la contraseña.
 // Si debe_cambiar_clave es true, el cliente obliga al cambio en un paso aparte.
 sendSuccess([

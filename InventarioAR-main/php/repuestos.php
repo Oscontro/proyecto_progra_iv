@@ -94,5 +94,5 @@ try {
 } catch (Throwable $e) {
     $linea = date('Y-m-d H:i:s') . " | repuestos | " . $e->getMessage();
     @file_put_contents($archivo_log, $linea . PHP_EOL, FILE_APPEND);
-    sendError("DEBUG: " . $e->getMessage(), 500);
+    sendError(API_DEBUG ? $e->getMessage() : "Error al obtener repuestos", 500);
 }

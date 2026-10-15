@@ -28,9 +28,9 @@ function getConnection() {
 }
 
 // Función auxiliar para respuestas de error
-function sendError($message, $code = 500) {
+function sendError($message, $code = 500, array $extra = []) {
     http_response_code($code);
-    echo json_encode(["error" => $message]);
+    echo json_encode(["error" => $message] + $extra);
     exit;
 }
 

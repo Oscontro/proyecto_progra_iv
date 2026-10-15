@@ -26,6 +26,6 @@ try {
     }
 
 } catch(PDOException $e) {
-    echo "Error: " . $e->getMessage();
+    sendError(API_DEBUG ? $e->getMessage() : "Error al obtener la imagen");
 }
 ?>

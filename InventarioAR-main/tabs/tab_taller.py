@@ -782,12 +782,12 @@ class DialogoEgresoTaller(QDialog):
 # ═══════════════════════════════════════════════════════════
 class DialogoActualizarEstado(QDialog):
 
-    def __init__(self, equipo_data, parent=None):
+    def __init__(self, api, equipo_data, parent=None):
         super().__init__(parent)
+        self.api = api
         self.equipo_data = equipo_data
         self.setWindowTitle("Modificar estado de equipo")
         self.setModal(True)
-        self.API_BASE_URL = direcciones.URL.API_BASE_URL  # URL base de la API
         #self.setFixedSize(450, 400)
         self.crear_interfaz()
         self.llenar_desplegables()
@@ -890,41 +890,39 @@ class DialogoActualizarEstado(QDialog):
         
     def llenar_combo(self, endpoint, combo, campo_json, incluir_todos=False, incluir_escriba=False):
         """
-        api_url: URL base (ej. http://api.com)
         endpoint: Archivo PHP (ej. marcas.php)
         combo: El objeto QComboBox
         campo_json: El nombre de la clave en el JSON (ej. 'marca')
         incluir_todos: Si agrega el item "Todos"
         """
-        api_url = direcciones.URL.API_BASE_URL
         data = []
-    
+
         try:
-            response = requests.get(f"{api_url}/{endpoint}")
-            response.raise_for_status()
-            data = response.json()
-        
+            # El token se adjunta solo y la URL base ya la sabe el cliente.
+            data = self.api.get(endpoint)
+
             # Extraemos la lista de valores
             items = [str(obj[campo_json]) for obj in data]
-        
+
             combo.clear()
             if incluir_todos:
                 combo.addItem("Todos")
             elif incluir_escriba:
                 combo.addItem("Escriba o seleccione")
-        
+
             combo.addItems(items)
-        
-        except requests.exceptions.HTTPError as errh:
-            print(f"Error HTTP: {response.status_code}. Detalle: {errh}")
-            print(f"Respuesta del servidor: {response.text}")
-        except requests.exceptions.RequestException as e:
-            print(f"Error de conexión: {e}")
-        except KeyError as e:
-            print(f"Campo '{campo_json}' no encontrado en el JSON: {e}")
-        except Exception as e:
-            print(f"Error inesperado: {e}")
-    
+
+        except SesionExpirada:
+            QMessageBox.warning(self, "Sesión expirada",
+                                "Tu sesión venció. Cerrá y volvé a iniciar sesión.")
+        except ApiError as e:
+            QMessageBox.warning(self, "Error al cargar datos",
+                                f"No se pudo cargar '{endpoint}':\n{e}")
+        except KeyError:
+            QMessageBox.warning(
+                self, "Error de datos",
+                f"El campo '{campo_json}' no existe en la respuesta de {endpoint}.")
+
         return data
     
     def llenar_desplegables(self):
@@ -960,24 +958,17 @@ class DialogoActualizarEstado(QDialog):
             "estado" : self.combo_estado.currentText().strip()
         }  
         serie = self.equipo_data.get("serie", "")
-        print(payload)
-        
+
         try:
-            response = requests.post(
-                f"{self.API_BASE_URL}/actualizar_estado.php",
-                data= payload
-            )
-            resultado = response.json()
-            print(resultado)
-            if resultado.get("success") and response.status_code == 200:
-                QMessageBox.information(
-                    self, "✅ Estado actualizado", f"El estado del equipo {serie} se actualizó correctamente.")
-                self.accept()
-            else:
-                QMessageBox.warning(self, "Error", f"Error al ingresar equipo: {resultado.get('message')}")
-                self.accept()
-        except Exception as e:
-                    QMessageBox.critical(self, "Error de Conexión", f"No se pudo conectar con la API: {str(e)}")
+            self.api.post("actualizar_estado.php", payload)
+            QMessageBox.information(
+                self, "✅ Estado actualizado", f"El estado del equipo {serie} se actualizó correctamente.")
+            self.accept()
+        except SesionExpirada:
+            QMessageBox.warning(self, "Sesión expirada",
+                                "Tu sesión venció. Cerrá y volvé a iniciar sesión.")
+        except ApiError as e:
+            QMessageBox.warning(self, "Error", f"No se pudo actualizar el estado:\n{e}")
 
 
 class DialogoTextoAutomatico(QDialog):
@@ -1580,7 +1571,8 @@ class TallerTab(ApiTab):
         """Abre diálogo de actualización de estado"""
         equipo = self.get_equipo_seleccionado()
         if equipo:
-            DialogoActualizarEstado(equipo, self).exec()
+            if DialogoActualizarEstado(self.api, equipo, self).exec() == QDialog.DialogCode.Accepted:
+                self.obtener_datos()
             
     def llenar_combo(self, endpoint, combo, campo_json,
                          incluir_todos=False, incluir_escriba=False):
