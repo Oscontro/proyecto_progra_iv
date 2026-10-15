@@ -17,7 +17,7 @@
 export const PESTANAS = [
     { id: 'ingreso',        titulo: 'Ingreso de Equipos', icono: '📥', cargar: null },
     { id: 'inventario',     titulo: 'Inventario',         icono: '📦', cargar: () => import('./pestanas/inventario.js') },
-    { id: 'taller',         titulo: 'Taller',             icono: '🛠️', cargar: null },
+    { id: 'taller',         titulo: 'Taller',             icono: '🛠️', cargar: () => import('./pestanas/taller.js') },
     { id: 'repuestos',      titulo: 'Repuestos',          icono: '🔩', cargar: null },
     { id: 'papelera',       titulo: 'Papelera',           icono: '🗑️', cargar: () => import('./pestanas/papelera.js') },
     { id: 'estadisticas',   titulo: 'Estadísticas',       icono: '📊', cargar: () => import('./pestanas/estadisticas.js') },

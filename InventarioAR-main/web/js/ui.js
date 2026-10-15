@@ -79,13 +79,16 @@ export function confirmar(titulo, mensaje, { aceptar = 'Aceptar', cancelar = 'Ca
 
 /** Deshabilita un formulario mientras corre una operación asíncrona. */
 export async function ocupado(formulario, operacion) {
-    const controles = formulario.querySelectorAll('input, button, select, textarea');
-    controles.forEach((c) => { c.disabled = true; });
+    // Se recuerda el estado de cada control para no habilitar al final
+    // uno que ya estaba deshabilitado a propósito.
+    const controles = [...formulario.querySelectorAll('input, button, select, textarea')]
+        .map((c) => [c, c.disabled]);
+    controles.forEach(([c]) => { c.disabled = true; });
     formulario.setAttribute('aria-busy', 'true');
     try {
         return await operacion();
     } finally {
-        controles.forEach((c) => { c.disabled = false; });
+        controles.forEach(([c, estabaDeshabilitado]) => { c.disabled = estabaDeshabilitado; });
         formulario.removeAttribute('aria-busy');
     }
 }
@@ -221,4 +224,50 @@ export function dialogo(titulo, contenido, { acciones = [], ancho = 'normal' } =
     document.body.append(modal);
     modal.showModal();
     return modal;
+}
+
+// ─────────────────────────────────────────────────────────
+// Diálogo con formulario. `alAceptar` recibe el <form> y devuelve true si
+// la operación salió bien (entonces se cierra); si devuelve false o lanza
+// un error, el diálogo queda abierto con los datos cargados.
+// ─────────────────────────────────────────────────────────
+export function dialogoFormulario(titulo, contenido, { textoAceptar = 'Guardar', alAceptar, ancho = 'normal' }) {
+    const cerrar = () => {
+        if (modal.open) modal.close();
+        modal.remove();
+    };
+    const form = el('form', { class: 'formulario', novalidate: true },
+        el('div', { class: 'modal-cuerpo' }, contenido),
+        el('div', { class: 'modal-acciones' },
+            el('button', { type: 'button', class: 'btn btn-secundario', onclick: cerrar }, 'Cancelar'),
+            el('button', { type: 'submit', class: 'btn btn-primario' }, textoAceptar)));
+    const modal = el('dialog', { class: `modal modal-${ancho}`, 'aria-label': titulo },
+        el('div', { class: 'modal-cabecera' },
+            el('h2', {}, titulo),
+            el('button', { type: 'button', class: 'modal-cerrar', 'aria-label': 'Cerrar', onclick: cerrar }, '✕')),
+        form);
+
+    form.addEventListener('submit', async (evento) => {
+        evento.preventDefault();
+        let ok = false;
+        try {
+            ok = await ocupado(form, () => alAceptar(form));
+        } catch (error) {
+            console.error(error);
+        }
+        if (ok) cerrar();
+    });
+    modal.addEventListener('close', cerrar);   // Escape
+    document.body.append(modal);
+    modal.showModal();
+    return { modal, form, cerrar };
+}
+
+/** Grupo de casillas. opciones: [{ valor, texto }]. Devuelve { nodo, marcadas() }. */
+export function grupoCasillas(leyenda, nombre, opciones) {
+    const casillas = opciones.map((o) => el('input', { type: 'checkbox', name: nombre, value: o.valor }));
+    const nodo = el('fieldset', { class: 'casillas' },
+        el('legend', {}, leyenda),
+        opciones.map((o, i) => el('label', { class: 'casilla' }, casillas[i], ` ${o.texto}`)));
+    return { nodo, casillas, marcadas: () => casillas.filter((c) => c.checked).map((c) => c.value) };
 }

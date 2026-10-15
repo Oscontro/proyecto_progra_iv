@@ -39,7 +39,6 @@ try {
     echo json_encode($datos, JSON_UNESCAPED_UNICODE);
     
 } catch(PDOException $e) {
-    http_response_code(500);
-    echo json_encode(["error" => "Error en la base de datos: " . $e->getMessage()]);
+    sendError(API_DEBUG ? $e->getMessage() : "Error al obtener los equipos en taller", 500);
 }
 ?>

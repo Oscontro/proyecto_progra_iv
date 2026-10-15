@@ -53,10 +53,24 @@ try {
     ];
 
     $tareas_convertidas = [];
-    foreach ($tareas as $nombre_columna) {
+    foreach ((array)$tareas as $nombre_columna) {
         if (in_array($nombre_columna, $tareas_permitidas, true)) {
             $tareas_convertidas[$nombre_columna] = 1;
         }
+    }
+
+    // ── Validaciones (antes no había ninguna en el servidor) ──
+    if (!$id_equipo || !$id_ingreso || !$id_estado) {
+        sendError("Faltan datos del equipo", 400);
+    }
+    if (!$tareas_convertidas) {
+        sendError("Debe seleccionar al menos una tarea", 400);
+    }
+    if (isset($tareas_convertidas['tarea_otros']) && $detalle_tareas === null) {
+        sendError("Marcó 'Otros' en tareas pero no escribió el detalle", 400);
+    }
+    if (isset($repuestos_convertidos['repuesto_otros']) && $detalle_otros === null) {
+        sendError("Marcó 'Otros' en repuestos pero no escribió el detalle", 400);
     }
 
     // Armar el registro a insertar.
@@ -73,6 +87,20 @@ try {
 
     $pdo = getConnection();
     $pdo->setAttribute(PDO::ATTR_EMULATE_PREPARES, true);
+
+    // El ingreso tiene que ser de este equipo, estar en taller y no estar egresado.
+    $stmt = $pdo->prepare(
+        "SELECT ti.egresado, e.en_taller
+           FROM taller_ingresos ti JOIN equipos e ON e.id_equipo = ti.id_equipo
+          WHERE ti.id_ingreso = ? AND ti.id_equipo = ?");
+    $stmt->execute([$id_ingreso, $id_equipo]);
+    $ingreso = $stmt->fetch();
+    if (!$ingreso) {
+        sendError("El equipo no tiene un ingreso a taller registrado", 409);
+    }
+    if (!$ingreso['en_taller'] || $ingreso['egresado']) {
+        sendError("El equipo ya fue egresado del taller", 409);
+    }
 
     $pdo->beginTransaction();
     $pdo->prepare("SET @usuario_actual = ?")->execute([$user['id']]);
@@ -106,9 +134,7 @@ try {
     $linea = date('Y-m-d H:i:s') . " | usuario=" . $user['id']
            . " | egreso_taller | id_equipo=" . ($id_equipo ?? 'N/A')
            . " | " . $e->getMessage();
-    @file_put_contents($archivo_log, $linea . PHP_EOL, FILE_APPEND);
-    // DEBUG temporal — sacar cuando esté estable:
-    @file_put_contents($archivo_log, "DEBUG: " . json_encode($registro) . PHP_EOL, FILE_APPEND);
+    @file_put_contents($archivo_log, $linea . " | datos=" . json_encode($registro) . PHP_EOL, FILE_APPEND);
 
-    sendError("DEBUG: " . $e->getMessage(), 500);
+    sendError(API_DEBUG ? $e->getMessage() : "No se pudo registrar el egreso del taller", 500);
 }
