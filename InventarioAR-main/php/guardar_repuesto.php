@@ -35,7 +35,6 @@ try {
     }
 
     $pdo = getConnection();
-    $pdo->prepare("SET @usuario_actual = ?")->execute([$user['id']]);
 
     // Validar todo antes de escribir nada.
     $ids_modelos = [];
@@ -78,6 +77,7 @@ try {
     foreach ($stocks as [$id_taller, $stock]) {
         $stmt->execute([$id_repuesto, $id_taller, $stock]);
     }
+    recalcularStockRepuesto($pdo, $id_repuesto);
     $pdo->commit();
 
     sendSuccess(['id_repuesto' => $id_repuesto], "Repuesto guardado exitosamente");

@@ -22,6 +22,7 @@ try {
         "UPDATE repuesto_stock SET stock_actual = stock_actual + ?, fecha_ingreso = NOW()
           WHERE id_repuesto = ? AND id_taller = ?"
     )->execute([$cantidad, $id_repuesto, $id_taller]);
+    recalcularStockRepuesto($pdo, $id_repuesto);
     $pdo->commit();
 
     sendSuccess(['id_repuesto' => $id_repuesto], "Stock ingresado correctamente");

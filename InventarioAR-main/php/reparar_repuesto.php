@@ -37,6 +37,7 @@ try {
                 fecha_ingreso = NOW()
           WHERE id_repuesto = ? AND id_taller = ?"
     )->execute([$cantidad, $cantidad, $id_repuesto, $id_taller]);
+    recalcularStockRepuesto($pdo, $id_repuesto);
     $pdo->commit();
 
     sendSuccess(['id_repuesto' => $id_repuesto], "Repuesto agregado a stock correctamente");

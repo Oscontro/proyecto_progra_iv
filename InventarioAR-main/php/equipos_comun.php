@@ -8,7 +8,7 @@
 //                            marcas.php ofrece las marcas de un tipo a partir
 //                            de modelos.tipo: un modelo sin tipo no aparece en
 //                            los desplegables, por eso se crea siempre con tipo.
-require_once 'auth.php';
+require_once 'historial_comun.php';
 
 const CODIFICACIONES = ['SQL', 'DPL', 'TPL'];
 
@@ -232,7 +232,6 @@ function altaEquipo(PDO $pdo, array $user, array $equipo, array $programacion,
 
     // ── Alta ──
     $pdo->beginTransaction();
-    $pdo->prepare("SET @usuario_actual = ?")->execute([$user['id']]);
 
     if ($id_tipo === null) {
         $pdo->prepare("INSERT INTO tipos (tipo, usuario_creacion) VALUES (?, ?)")->execute([$tipo, $user['id']]);
@@ -262,6 +261,7 @@ function altaEquipo(PDO $pdo, array $user, array $equipo, array $programacion,
     )->execute([$serie, $id_tipo, $id_marca, $id_modelo, $id_escala, $sector, $estado, $obs,
                 $potencia, $canales ? $plantilla : null, $user['id']]);
     $id_equipo = (int)$pdo->lastInsertId();
+    registrarAltaEquipo($pdo, $id_equipo, (int)$user['id']);
 
     if ($canales) {
         guardarProgramacion($pdo, $id_equipo, $canales, $plantilla, (int)$user['id']);

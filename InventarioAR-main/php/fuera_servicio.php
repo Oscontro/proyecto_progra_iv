@@ -36,6 +36,7 @@ try {
         "UPDATE repuesto_stock SET fuera_servicio = fuera_servicio + ?
           WHERE id_repuesto = ? AND id_taller = ?"
     )->execute([$cantidad, $id_repuesto, $id_taller]);
+    recalcularStockRepuesto($pdo, $id_repuesto);
     $pdo->commit();
 
     sendSuccess(['id_repuesto' => $id_repuesto], "Repuesto puesto fuera de servicio correctamente");

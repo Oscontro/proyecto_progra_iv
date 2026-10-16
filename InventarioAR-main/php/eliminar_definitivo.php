@@ -14,7 +14,6 @@ $numero_serie = null;
 try {
     $pdo = getConnection();
     $pdo->setAttribute(PDO::ATTR_EMULATE_PREPARES, false);
-    $pdo->prepare("SET @usuario_actual = ?")->execute([$user['id']]);
 
     $datos = getJsonInput();
     if (!$datos) {

@@ -44,6 +44,7 @@ try {
     foreach ($ajustes as [$id_taller, $stock, $fuera_servicio]) {
         $stmt->execute([$id_repuesto, $id_taller, $stock, $fuera_servicio]);
     }
+    recalcularStockRepuesto($pdo, $id_repuesto);
     $pdo->commit();
 
     sendSuccess(['id_repuesto' => $id_repuesto], "Repuesto actualizado correctamente");

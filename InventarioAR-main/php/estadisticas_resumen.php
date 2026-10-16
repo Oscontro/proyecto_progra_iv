@@ -9,7 +9,11 @@ try {
 
     $total       = $pdo->query("SELECT COUNT(id_equipo) FROM equipos WHERE en_taller = 0 AND en_papelera = 0")->fetchColumn();
     $en_taller   = $pdo->query("SELECT COUNT(id_equipo) FROM equipos WHERE en_taller = 1")->fetchColumn();
-    $movimientos = $pdo->query("SELECT COUNT(identificador) FROM vista_movimientos WHERE origen COLLATE utf8mb4_unicode_ci = 'equipo' AND YEAR(fecha) = YEAR(NOW())")->fetchColumn();
+    // Eventos del historial de este año de equipos que siguen existiendo.
+    $movimientos = $pdo->query("SELECT COUNT(e.numero_serie)
+                                 FROM historial_equipos he
+                                 LEFT JOIN equipos e ON e.id_equipo = he.id_equipo
+                                 WHERE YEAR(he.fecha_evento) = YEAR(NOW())")->fetchColumn();
     $dados_baja  = $pdo->query("SELECT COUNT(id_equipo) FROM equipos WHERE en_papelera = 1")->fetchColumn();
 
     sendSuccess([

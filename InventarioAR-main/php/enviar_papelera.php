@@ -1,5 +1,5 @@
 <?php
-require_once 'auth.php';    // trae conexion.php y config.php; requireAuth y getJsonInput
+require_once 'historial_comun.php';    // trae auth.php: requireAuth y getJsonInput
 $user = requireAuth();
 
 $archivo_log = __DIR__ . '/logs/errores_importacion.log';
@@ -21,7 +21,6 @@ try {
     }
 
     $pdo = getConnection();
-    $pdo->setAttribute(PDO::ATTR_EMULATE_PREPARES, true);
 
     // Solo se envía a la papelera un equipo del inventario activo. El número
     // de serie que queda registrado sale de la base, no del cliente.
@@ -39,14 +38,16 @@ try {
     }
     $numero_serie = $equipo['numero_serie'];
 
-    $pdo->prepare("SET @usuario_actual = ?")->execute([$user['id']]);
-
     $pdo->beginTransaction();
 
-    // El usuario sale del token, no del cliente.
-    $stmt = $pdo->prepare("CALL sp_enviar_a_papelera(?, ?, ?, ?)");
-    $stmt->execute([$id_equipo, $user['id'], $motivo === '' ? null : $motivo, $numero_serie]);
-    $stmt->closeCursor();   // libera el cursor del SP antes de confirmar
+    // Antes era el procedimiento sp_enviar_a_papelera (el hosting no permite
+    // procedimientos). El usuario sale de la sesión, no del cliente.
+    $antes = filaEquipo($pdo, $id_equipo);
+    $pdo->prepare("UPDATE equipos SET en_papelera = TRUE, usuario_modificacion = ? WHERE id_equipo = ?")
+        ->execute([$user['id'], $id_equipo]);
+    registrarCambiosEquipo($pdo, $antes, $id_equipo, $user['id']);
+    $pdo->prepare("INSERT INTO papelera (id_equipo, usuario_eliminacion, motivo_eliminacion, numero_serie) VALUES (?, ?, ?, ?)")
+        ->execute([$id_equipo, $user['id'], $motivo === '' ? null : $motivo, $numero_serie]);
 
     $pdo->commit();
 

@@ -1,5 +1,5 @@
 <?php
-require_once 'auth.php';
+require_once 'historial_comun.php';
 $user = requireAuth();
 
 $archivo_log = __DIR__ . '/logs/errores_importacion.log';
@@ -15,8 +15,6 @@ $registro  = null;
 
 try {
     $pdo = getConnection();
-    $pdo->setAttribute(PDO::ATTR_EMULATE_PREPARES, true);
-    $pdo->prepare("SET @usuario_actual = ?")->execute([$user['id']]);
     $datos = getJsonInput();
     if (!$datos || !is_array($datos)) {
         sendError("No se recibieron datos", 400);
@@ -89,9 +87,10 @@ try {
 
     $pdo->beginTransaction();
 
-    $stmt = $pdo->prepare("CALL sp_ingresar_taller(?)");
-    $stmt->execute([$id_estado]);
-    $stmt->closeCursor();
+    // "No ingresado" (7) -> "Ingresado" (3). Antes era el procedimiento
+    // sp_ingresar_taller (el hosting no permite procedimientos).
+    $pdo->prepare("UPDATE equipo_estado SET id_estado = 3 WHERE id = ? AND id_estado = 7")
+        ->execute([$id_estado]);
 
     // Los VALORES van con placeholders (seguro). Los NOMBRES de columna
     // ya pasaron por la lista blanca, así que es seguro interpolarlos.
@@ -101,6 +100,11 @@ try {
     $sql = "INSERT INTO taller_ingresos ($columnas) VALUES ($placeholders)";
     $stmt = $pdo->prepare($sql);
     $stmt->execute(array_values($registro));
+
+    $stmt = $pdo->prepare("SELECT taller FROM talleres WHERE id_taller = ?");
+    $stmt->execute([$id_taller]);
+    registrarHistorialEquipo($pdo, (int)$id_equipo, $user['id'], 'INGRESO_TALLER',
+        'Equipo ingresado a ' . $stmt->fetchColumn() . ($nro_sd !== null ? " - Ticket SD: $nro_sd" : ''));
 
     $pdo->commit();
 

@@ -1,5 +1,5 @@
 <?php
-require_once 'auth.php';    // trae conexion.php y config.php; define requireAuth y getJsonInput
+require_once 'historial_comun.php';    // trae auth.php: requireAuth y getJsonInput
 $user = requireAuth();      // ← la identidad sale de acá, verificada contra el token
 
 // Nota: NO repetimos header('Content-Type: application/json').
@@ -31,7 +31,6 @@ try {
     }
 
     $pdo = getConnection();
-    $pdo->setAttribute(PDO::ATTR_EMULATE_PREPARES, true); // necesario para el SP
 
     // ── Validaciones: antes solo las hacía (o no) el cliente ──
     // Un equipo que ya está en taller generaría una segunda recepción.
@@ -53,17 +52,22 @@ try {
         sendError('El taller elegido no existe', 400);
     }
 
-    $pdo->prepare("SET @usuario_actual = ?")->execute([$user['id']]);
-
-    // ── Transacción: las dos escrituras son una sola operación lógica ──
-    // Si el INSERT del estado falla, el CALL del SP no debe quedar aplicado.
+    // ── Transacción: todas las escrituras son una sola operación lógica ──
     $pdo->beginTransaction();
 
-    // Stored procedure. El usuario sale del token, no del JSON.
-    $stmt = $pdo->prepare("CALL sp_enviar_equipo_taller_v4(?, ?, ?, ?)");
+    // Antes era el procedimiento sp_enviar_equipo_taller_v4 (el hosting no
+    // permite procedimientos). El usuario sale de la sesión, no del JSON.
+    $antes = filaEquipo($pdo, $id_equipo);
+    $pdo->prepare("UPDATE equipos SET en_taller = TRUE, usuario_modificacion = ? WHERE id_equipo = ?")
+        ->execute([$user['id'], $id_equipo]);
+    registrarCambiosEquipo($pdo, $antes, $id_equipo, $user['id']);
+    $pdo->prepare("INSERT INTO taller_recepcion (id_equipo, id_taller, usuario_modificacion) VALUES (?, ?, ?)")
+        ->execute([$id_equipo, $id_taller, $user['id']]);
     // observaciones_equipos.texto_observacion es NOT NULL: sin texto va vacío.
-    $stmt->execute([$id_equipo, $id_taller, (int)$user['id'], $observaciones]);
-    $stmt->closeCursor();
+    $pdo->prepare("INSERT INTO observaciones_equipos (id_equipo, usuario_observacion, texto_observacion) VALUES (?, ?, ?)")
+        ->execute([$id_equipo, $user['id'], $observaciones]);
+    $pdo->prepare("INSERT INTO observaciones_taller (id_equipo, usuario_observacion, observacion) VALUES (?, ?, ?)")
+        ->execute([$id_equipo, $user['id'], $observaciones]);
 
     // Registrar el nuevo estado del equipo ("No ingresado").
     $pdo->prepare("INSERT INTO equipo_estado (id_equipo, id_estado) VALUES (?, ?)")

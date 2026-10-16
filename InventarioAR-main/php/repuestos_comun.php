@@ -6,11 +6,10 @@
 //                                              POR TALLER (fuente de verdad).
 //   repuestos.en_uso                        -> conteo general en uso.
 //   repuestos.stock_actual                  -> total de stock (suma de los
-//                                              talleres). Lo mantienen los
-//                                              triggers trg_stock_taller_*
-//                                              de repuesto_stock: no se toca
-//                                              desde PHP.
-require_once 'auth.php';
+//                                              talleres). Se recalcula con
+//                                              recalcularStockRepuesto()
+//                                              antes de cada commit.
+require_once 'historial_comun.php';
 
 /** Entero >= $minimo, o corta con 400. */
 function leerEntero($valor, string $campo, int $minimo = 0): int {

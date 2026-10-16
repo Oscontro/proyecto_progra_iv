@@ -23,7 +23,6 @@ try {
         sendError("No podés desactivar tu propio usuario", 409);
     }
 
-    $pdo->prepare("SET @usuario_actual = ?")->execute([$user['id']]);
     // Activar una cuenta registrada desde la portada es aprobarla.
     $pdo->prepare("UPDATE usuarios SET activo = ?, pendiente_aprobacion = IF(? = 1, 0, pendiente_aprobacion) WHERE id_usuario = ?")
         ->execute([$activo, $activo, $actual['id_usuario']]);

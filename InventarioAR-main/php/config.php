@@ -47,5 +47,11 @@ function conectarBD(): PDO {
         PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
         PDO::ATTR_EMULATE_PREPARES   => false,
+        // Mismo comportamiento en cualquier servidor: el sql_mode con el que se
+        // desarrolló y probó (el del hosting puede ser estricto) y la hora de
+        // Argentina para NOW() y los DEFAULT current_timestamp() (el hosting
+        // puede estar en otra zona). Argentina no tiene horario de verano.
+        PDO::MYSQL_ATTR_INIT_COMMAND => "SET sql_mode = 'NO_ZERO_IN_DATE,NO_ZERO_DATE,NO_ENGINE_SUBSTITUTION', "
+                                      . "time_zone = '-03:00'",
     ]);
 }

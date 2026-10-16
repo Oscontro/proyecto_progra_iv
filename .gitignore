@@ -16,3 +16,9 @@ InventarioAR-main/php/config.local.php
 
 # Capturas de tools/snapshot_api.php (contienen datos reales).
 InventarioAR-main/tools/snapshots/
+
+# Paquete para subir al hosting (tools/armar_publicacion.sh)
+publicacion/
+
+# Configuración del hosting (contraseña de la base)
+InventarioAR-main/php/config.hosting.php

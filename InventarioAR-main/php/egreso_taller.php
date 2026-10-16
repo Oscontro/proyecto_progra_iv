@@ -85,7 +85,6 @@ try {
     }
 
     $pdo = getConnection();
-    $pdo->setAttribute(PDO::ATTR_EMULATE_PREPARES, true);
 
     // El ingreso tiene que ser de este equipo, estar en taller y no estar egresado.
     $stmt = $pdo->prepare(
@@ -130,7 +129,6 @@ try {
     ];
 
     $pdo->beginTransaction();
-    $pdo->prepare("SET @usuario_actual = ?")->execute([$user['id']]);
 
     // Stock: se bloquean las filas y se valida TODO antes de modificar nada.
     $stmt = $pdo->prepare(
@@ -145,10 +143,15 @@ try {
         }
     }
 
-    // Cambio de estado. El usuario sale del token.
-    $stmt_estado = $pdo->prepare("CALL sp_egreso_cambio_estado(?, ?, ?)");
-    $stmt_estado->execute([$id_equipo, $user['id'], $id_estado]);
-    $stmt_estado->closeCursor();
+    // Cambio de estado: fuera del taller, "REPARADO", y estado de taller
+    // "Reparado" (6). Antes era el procedimiento sp_egreso_cambio_estado (el
+    // hosting no permite procedimientos). El usuario sale de la sesión.
+    $antes = filaEquipo($pdo, (int)$id_equipo);
+    $pdo->prepare("UPDATE equipos SET en_taller = FALSE, estado = 'REPARADO', usuario_modificacion = ? WHERE id_equipo = ?")
+        ->execute([$user['id'], $id_equipo]);
+    registrarCambiosEquipo($pdo, $antes, (int)$id_equipo, $user['id']);
+    $pdo->prepare("UPDATE equipo_estado SET id_estado = 6 WHERE id = ? AND id_equipo = ?")
+        ->execute([$id_estado, $id_equipo]);
 
     // VALORES con placeholders; NOMBRES ya filtrados por la lista blanca.
     $columnas     = implode(', ', array_keys($registro));
@@ -156,6 +159,8 @@ try {
     $pdo->prepare("INSERT INTO taller_egresos ($columnas) VALUES ($placeholders)")
         ->execute(array_values($registro));
     $id_egreso = (int)$pdo->lastInsertId();
+    $pdo->prepare("UPDATE taller_ingresos SET egresado = TRUE WHERE id_ingreso = ?")->execute([$id_ingreso]);
+    registrarHistorialEquipo($pdo, (int)$id_equipo, $user['id'], 'EGRESO_TALLER', 'Equipo egresado del taller');
 
     // Repuestos del catálogo: stock del taller -> en uso, y registro del uso.
     $stmt_stock  = $pdo->prepare("UPDATE repuesto_stock SET stock_actual = stock_actual - ? WHERE id_repuesto = ? AND id_taller = ?");
@@ -167,6 +172,7 @@ try {
         $stmt_stock->execute([$cantidad, $id_repuesto, $id_taller]);
         $stmt_en_uso->execute([$cantidad, $id_repuesto]);
         $stmt_uso->execute([$id_egreso, $id_repuesto, $nombres[$id_repuesto], $id_taller, $cantidad]);
+        recalcularStockRepuesto($pdo, $id_repuesto);
     }
 
     // Historial: repuestos utilizados (antes lo hacía un trigger con las columnas fijas).

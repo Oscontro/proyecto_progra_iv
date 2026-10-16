@@ -1,6 +1,6 @@
 <?php
-require_once 'auth.php';    // reemplaza a conexion.php, ya lo incluye adentro
-$user = requireAuth(); 
+require_once 'historial_comun.php';    // trae auth.php
+$user = requireAuth();
 
 $archivo_log = __DIR__ . '/logs/errores_importacion.log';
 
@@ -8,8 +8,6 @@ $id_vehiculo = null;
 
 try {
     $pdo = getConnection();
-    $pdo->setAttribute(PDO::ATTR_EMULATE_PREPARES, true);
-    $pdo->prepare("SET @usuario_actual = ?")->execute([$user['id']]);
     $datos = getJsonInput();
 
     if (!$datos) {
@@ -32,10 +30,13 @@ try {
         sendError("El vehículo no está en la papelera", 409);
     }
 
+    // Antes era el procedimiento sp_restaurar_vehiculo_papelera (el hosting
+    // no permite procedimientos).
     $pdo->beginTransaction();
-    $stmt = $pdo->prepare("CALL sp_restaurar_vehiculo_papelera(?, ?)");
-    $stmt->execute([$id_vehiculo,  $user["id"]]);
-    $stmt->closeCursor();
+    $pdo->prepare("UPDATE vehiculos SET de_baja = FALSE, usuario_modificacion = ? WHERE id_vehiculo = ?")
+        ->execute([$user['id'], $id_vehiculo]);
+    $pdo->prepare("UPDATE papelera_vehiculos SET puede_restaurar = FALSE WHERE id_vehiculo = ?")->execute([$id_vehiculo]);
+    registrarHistorialVehiculo($pdo, (int)$id_vehiculo, $user['id'], 'ALTA DE VEHICULO', 'Vehiculo restaurado');
     $pdo->commit();
     
     sendSuccess(["success" => true], "Se restauró vehículo correctamente");

@@ -24,7 +24,6 @@ try {
         sendError("No se encontró el repuesto con id_repuesto=$id_repuesto", 404);
     }
 
-    $pdo->prepare("SET @usuario_actual = ?")->execute([$user['id']]);
 
     $pdo->beginTransaction();
 

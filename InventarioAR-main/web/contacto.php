@@ -43,8 +43,9 @@ function enviarConsulta(array $c, int $id): bool {
         'Content-Transfer-Encoding: 8bit',
     ]);
     // Muchos servidores (y los hostings gratuitos) no tienen el correo habilitado:
-    // el fallo se registra en la tabla y no interrumpe la consulta.
-    return @mail(CONTACTO_DESTINO, $asunto, $cuerpo, $cabeceras);
+    // el fallo se registra en la tabla y no interrumpe la consulta. Si mail()
+    // está en disable_functions ni siquiera existe, y llamarla sería un error fatal.
+    return function_exists('mail') && @mail(CONTACTO_DESTINO, $asunto, $cuerpo, $cabeceras);
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {

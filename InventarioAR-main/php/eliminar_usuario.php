@@ -18,7 +18,6 @@ try {
     $actual = usuarioPorLegajo($pdo, $legajo);
     controlarAccesoAdmin($pdo, $actual, $user, false, 'eliminar');
 
-    $pdo->prepare("SET @usuario_actual = ?")->execute([$user['id']]);
     try {
         $pdo->prepare("DELETE FROM usuarios WHERE id_usuario = ?")->execute([$actual['id_usuario']]);
     } catch (PDOException $e) {

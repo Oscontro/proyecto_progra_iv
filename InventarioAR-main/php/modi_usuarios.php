@@ -19,7 +19,6 @@ try {
     controlarAccesoAdmin($pdo, $actual, $user, $u['es_administrador'] && $u['activo'],
                          'quitarle el perfil de administrador o desactivar');
 
-    $pdo->prepare("SET @usuario_actual = ?")->execute([$user['id']]);
     $pdo->prepare(
         "UPDATE usuarios
             SET username = ?, nombre = ?, apellido = ?, email = ?, es_administrador = ?, activo = ?

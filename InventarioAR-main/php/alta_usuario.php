@@ -19,7 +19,6 @@ try {
     controlarDuplicados($pdo, $u['legajo'], $u['username']);
 
     $clave = claveTemporal();
-    $pdo->prepare("SET @usuario_actual = ?")->execute([$user['id']]);
     $pdo->prepare(
         "INSERT INTO usuarios
             (legajo, username, nombre, apellido, email, password_hash,

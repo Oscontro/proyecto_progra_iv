@@ -11,7 +11,10 @@
 let xlsx = null;
 
 async function cargarSheetJS() {
-    xlsx ??= await import('../vendor/sheetjs/xlsx.mjs');
+    // Es el build ESM de SheetJS (xlsx.mjs) con extensión .js: muchos
+    // servidores (InfinityFree incluido) no envían .mjs como JavaScript y el
+    // navegador se niega a importarlo como módulo.
+    xlsx ??= await import('../vendor/sheetjs/xlsx.js');
     return xlsx;
 }
 

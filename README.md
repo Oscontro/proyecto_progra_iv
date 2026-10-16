@@ -65,7 +65,10 @@ Proyecto Integrador (2º parcial) · Programación IV · HTML5, CSS, JavaScript,
 
 - **Frontend:** HTML5, CSS y JavaScript (módulos ES, sin frameworks). Excel en el navegador con [SheetJS](https://sheetjs.com/) (`web/vendor/sheetjs`, licencia Apache 2.0).
 - **Backend:** PHP 8.1 o superior (probado con 8.2) con PDO. Las páginas públicas son PHP que genera HTML; la aplicación consulta una API JSON (`php/*.php`).
-- **Base de datos:** MariaDB 10.4 (probado; un MySQL compatible también debería funcionar). Usa vistas, procedimientos almacenados y triggers.
+- **Base de datos:** MariaDB 10.4 (probado; un MySQL compatible también debería funcionar). Solo tablas
+  InnoDB con claves foráneas: no usa vistas, triggers ni procedimientos almacenados, que los hostings
+  gratuitos no permiten. Esa lógica (historial de cambios, stock total de repuestos, circuito de taller)
+  está en PHP (`php/historial_comun.php` y los endpoints).
 
 ## Estructura del proyecto
 
@@ -93,7 +96,9 @@ proyecto_progra_iv/
     ├── db/
     │   ├── schema.sql          estructura completa de la base (sin datos)
     │   └── migraciones/        cambios de estructura, en orden de fecha
-    ├── tools/snapshot_api.php  red de seguridad: captura y compara respuestas de la API
+    ├── tools/
+    │   ├── snapshot_api.php    red de seguridad: captura y compara respuestas de la API
+    │   └── armar_publicacion.sh  arma el paquete y el volcado de la base para el hosting
     └── retirado/               código fuera de uso (bloqueado por HTTP)
 ```
 
@@ -137,27 +142,49 @@ del que se migró la aplicación. Ya no se usa y no hace falta publicarlo.
 
 5. Abrir <http://localhost/proyecto_progra_iv/InventarioAR-main/>.
 
-## Publicación en un hosting
+## Publicación en InfinityFree
 
-1. **Subir** el contenido de `InventarioAR-main/` **sin**: `*.py`, `tabs/`, `__pycache__/`,
-   `tools/snapshots/` ni ningún volcado `.sql` con datos. (Igualmente quedan bloqueados por `.htaccess`.)
-2. **Crear `php/config.local.php`** con los datos de la base del hosting (ver `config.local.example.php`)
-   y `api_debug => false`.
-3. **Importar la base.** Los hostings compartidos no permiten `DEFINER=root@localhost`; hay que quitarlo
-   del volcado antes de importarlo:
+El plan gratuito de [InfinityFree](https://www.infinityfree.com/) tiene PHP 8 y MariaDB 10.4, con
+InnoDB y claves foráneas, pero **no** permite vistas, triggers, procedimientos, funciones ni eventos
+(el usuario de la base solo tiene ALTER, CREATE, DELETE, DROP, INDEX, INSERT, SELECT, UPDATE y
+LOCK TABLES). Por eso la base del proyecto es solo de tablas. Tampoco hay `mail()`.
+
+1. **Crear la cuenta y la base.** En el panel: *MySQL Databases* → crear una base (queda
+   `if0_NNNNNNNN_nombre`). Anotar host (`sqlNNN.infinityfree.com`), usuario y contraseña
+   (la de la cuenta de hosting, en *Account Details*).
+2. **Configuración.** Copiar `php/config.local.example.php` como `php/config.hosting.php` (no se
+   versiona) y completar `db_host`, `db_user`, `db_pass` y `db_name`.
+3. **Armar el paquete** (Git Bash, desde la raíz del repositorio):
 
    ```bash
-   mysqldump -u root --routines --triggers inventario_radios \
-     | sed -E 's/DEFINER=`[^`]+`@`[^`]+`//g' > base_para_hosting.sql
+   bash InventarioAR-main/tools/armar_publicacion.sh
    ```
 
-4. **Verificar con el proveedor:**
-   - **Procedimientos almacenados y triggers.** La aplicación los usa (envío a taller, papelera,
-     ingreso y egreso de taller, stock de repuestos, historial). Algunos hostings gratuitos no los permiten.
-   - **HTTPS.** Con HTTPS la cookie de sesión se marca `Secure` automáticamente.
-   - **`Options -Indexes`** en `InventarioAR-main/.htaccess`: si el hosting no lo permite (error 500), borrar esa línea.
-   - **`mail()`:** suele estar desactivada en hostings gratuitos. La consulta de contacto se guarda igual en
-     la base (columna `mail_enviado = 0`) y la página lo informa.
+   Genera en `publicacion/` (no se versiona):
+   - `htdocs/` y `htdocs.zip`: solo `index.php`, `.htaccess`, `web/`, `php/` y `resources/`, con
+     `config.hosting.php` incluido como `php/config.local.php`. Nada del cliente de escritorio,
+     `db/`, `tools/` ni logs.
+   - `base_para_hosting.sql`: tablas y datos de la base local, sin `CREATE DATABASE`. **Tiene datos
+     reales y hashes de contraseñas: no compartirlo ni versionarlo.**
+4. **Importar la base.** En el panel → *phpMyAdmin* de la base creada → *Importar* →
+   `base_para_hosting.sql`.
+5. **Subir los archivos** dentro de `htdocs/` del sitio: por FTP (FileZilla, con los datos de
+   *FTP Details*) o con el *File Manager* del panel, subiendo `htdocs.zip` y extrayéndolo ahí.
+   Borrar el `index2.html` que crea InfinityFree.
+6. **HTTPS.** Panel → *Free SSL Certificates* → emitir el certificado del dominio. Con HTTPS la
+   cookie de sesión se marca `Secure` automáticamente.
+7. **Probar:** portada, registro, ingreso, contacto, y como administrador aprobar el registro,
+   un alta de equipo y un envío a taller.
+
+Notas:
+- **`mail()`** no funciona en InfinityFree. La consulta de contacto se guarda igual en la tabla
+  `contactos` (`mail_enviado = 0`), la página lo informa y el administrador la ve en la pestaña
+  **Consultas**.
+- **`sql_mode` y zona horaria:** cada conexión fija el `sql_mode` con el que se desarrolló y la
+  hora de Argentina (`php/config.php`), así el comportamiento no depende de la configuración del servidor.
+- **`Options -Indexes`** en `.htaccess`: si algún hosting no lo permite (error 500), borrar esa línea.
+- InfinityFree muestra una verificación del navegador en la primera visita; por eso herramientas
+  como `tools/snapshot_api.php` (sin navegador) no funcionan contra el sitio publicado.
 
 ## Base de datos
 
@@ -183,7 +210,7 @@ mysql -u root --default-character-set=utf8mb4 inventario_radios < db/migraciones
 Después de aplicar una migración se regenera `schema.sql`:
 
 ```bash
-mysqldump -u root --no-data --routines --triggers --skip-comments --default-character-set=utf8mb4 inventario_radios \
+mysqldump -u root --no-data --skip-triggers --skip-comments --default-character-set=utf8mb4 inventario_radios \
   | sed -E 's/ AUTO_INCREMENT=[0-9]+//' > db/schema.sql
 ```
 

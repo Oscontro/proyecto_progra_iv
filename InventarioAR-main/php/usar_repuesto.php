@@ -38,6 +38,7 @@ try {
     )->execute([$cantidad, $id_repuesto, $id_taller]);
     $pdo->prepare("UPDATE repuestos SET en_uso = en_uso + ? WHERE id_repuesto = ?")
         ->execute([$cantidad, $id_repuesto]);
+    recalcularStockRepuesto($pdo, $id_repuesto);
     $pdo->commit();
 
     sendSuccess(['id_repuesto' => $id_repuesto], "Stock puesto en uso correctamente");

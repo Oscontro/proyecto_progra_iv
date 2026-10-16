@@ -1,6 +1,6 @@
 <?php
-require_once 'auth.php';    // reemplaza a conexion.php, ya lo incluye adentro
-$user = requireAuth(); 
+require_once 'historial_comun.php';    // trae auth.php
+$user = requireAuth();
 
 $archivo_log = __DIR__ . '/logs/errores_importacion.log';
 
@@ -8,9 +8,7 @@ $id_equipo = null;
 
 try {
     $pdo = getConnection();
-    $pdo->setAttribute(PDO::ATTR_EMULATE_PREPARES, true);
     $datos = getJsonInput();
-    $pdo->prepare("SET @usuario_actual = ?")->execute([$user['id']]);
 
     if (!$datos) {
         sendError("No se recibieron datos", 400);
@@ -32,10 +30,14 @@ try {
         sendError("El equipo no está en la papelera", 409);
     }
 
+    // Antes era el procedimiento sp_restaurar_equipo_papelera (el hosting no
+    // permite procedimientos).
     $pdo->beginTransaction();
-    $stmt = $pdo->prepare("CALL sp_restaurar_equipo_papelera(?, ?)");
-    $stmt->execute([$id_equipo,  $user['id']]);
-    $stmt->closeCursor();
+    $antes = filaEquipo($pdo, (int)$id_equipo);
+    $pdo->prepare("UPDATE equipos SET en_papelera = FALSE, usuario_modificacion = ? WHERE id_equipo = ?")
+        ->execute([$user['id'], $id_equipo]);
+    registrarCambiosEquipo($pdo, $antes, (int)$id_equipo, $user['id']);
+    $pdo->prepare("UPDATE papelera SET puede_restaurar = FALSE WHERE id_equipo = ?")->execute([$id_equipo]);
 
     $pdo->commit();
     

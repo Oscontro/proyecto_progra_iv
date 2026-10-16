@@ -75,6 +75,7 @@ try {
             $stmt->execute([$id_repuesto, $id_taller, $stock]);
         }
     }
+    recalcularStockRepuesto($pdo, $id_repuesto);
     $pdo->commit();
 
     sendSuccess(['id_repuesto' => $id_repuesto], "Repuesto modificado correctamente");

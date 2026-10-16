@@ -22,7 +22,6 @@ try {
     }
 
     $clave = claveTemporal();
-    $pdo->prepare("SET @usuario_actual = ?")->execute([$user['id']]);
     $pdo->prepare(
         "UPDATE usuarios
             SET password_hash = ?, debe_cambiar_clave = 1, intentos_fallidos = 0, bloqueado_hasta = NULL

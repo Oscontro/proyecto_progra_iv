@@ -91,7 +91,7 @@ try {
     }
 
     $pdo->beginTransaction();
-    $pdo->prepare("SET @usuario_actual = ?")->execute([$user['id']]);
+    $antes = filaEquipo($pdo, (int)$id_equipo);
 
     $sets = [
         'tipo = :tipo',
@@ -126,6 +126,7 @@ try {
     $stmt = $pdo->prepare("UPDATE equipos SET " . implode(', ', $sets) . " WHERE id_equipo = :id_equipo");
     $stmt->execute($params);
     $rowsAffected = $stmt->rowCount();
+    registrarCambiosEquipo($pdo, $antes, (int)$id_equipo, (int)$user['id']);
 
     if ($canales) {
         guardarProgramacion($pdo, $id_equipo, $canales, $nombre_plantilla, (int)$user['id']);
