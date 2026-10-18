@@ -79,7 +79,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $enviada = flash('contacto_ok');
 $mapa = 'https://maps.google.com/maps?q=' . rawurlencode(DIRECCION) . '&z=16&output=embed';
-encabezado('Contacto', 'contacto', ['mapa' => true]);
+encabezado('Contacto', 'contacto', [
+    'mapa' => true,
+    'descripcion' => 'Contacto del ' . NOMBRE_SISTEMA . ': mapa de la UTN Facultad Regional Haedo y formulario de consulta.',
+]);
 ?>
 <h1>Contacto</h1>
 <div class="contacto">

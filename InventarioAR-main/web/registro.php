@@ -43,7 +43,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $registrado = flash('registro_ok');
-encabezado('Registrarse', 'registro');
+encabezado('Registrarse', 'registro', [
+    'descripcion' => 'Creá tu cuenta en el ' . NOMBRE_SISTEMA . '. Un administrador aprueba la solicitud antes del primer ingreso.',
+]);
 ?>
 <section class="caja-formulario">
     <?php if ($registrado): ?>

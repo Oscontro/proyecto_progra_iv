@@ -10,12 +10,36 @@
 //       alActivar: (fila) => {...},          // doble clic o Enter
 //       formato: (valor) => texto,           // opcional
 //   });
+//
+// Opciones por columna: `pildora: true` muestra el valor como etiqueta de color
+// según su texto (estados); `mono: true` usa letra monoespaciada (números de serie).
 //   contenedor.append(t.contador, t.nodo);
 //   t.mostrar(filasFiltradas, totalSinFiltrar);
 
 import { el, textoCelda } from './ui.js';
 
 const comparar = new Intl.Collator('es', { numeric: true, sensitivity: 'base' }).compare;
+
+// Tono de la píldora según el texto del estado (los estados son texto libre en la base).
+// El orden importa: "desactivado" contiene "activ" y "reparado" contiene "repar".
+const TONOS = [
+    ['rojo', /sin stock|baja|fallid|desactivad|irreparable|bloquead/],
+    ['verde', /^ok$|en uso|operativ|servicio|activ|reparad|egresad|leida|exitos/],
+    ['ambar', /bajo|repar|diagnost|taller|pendiente|nueva|ingresad|espera|recib/],
+    ['azul', /stock|disponible/],
+];
+
+function tonoDe(texto) {
+    const normal = texto.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+    return TONOS.find(([, patron]) => patron.test(normal))?.[0] ?? 'neutro';
+}
+
+function celda(texto, columna) {
+    if (columna.pildora && texto && texto !== '-') {
+        return el('td', {}, el('span', { class: `pildora pildora-${tonoDe(texto)}` }, texto));
+    }
+    return el('td', { class: columna.mono ? 'mono' : null }, texto);
+}
 
 export function tablaSeleccionable({ columnas, etiqueta, unidad = 'filas', alSeleccionar, alActivar, formato = textoCelda }) {
     let filas = [];
@@ -78,7 +102,7 @@ export function tablaSeleccionable({ columnas, etiqueta, unidad = 'filas', alSel
         const fragmento = document.createDocumentFragment();
         filas.forEach((fila, i) => {
             fragmento.append(el('tr', { dataset: { indice: i } },
-                columnas.map((c) => el('td', {}, formato(fila[c.clave], c.clave)))));
+                columnas.map((c) => celda(formato(fila[c.clave], c.clave), c))));
         });
         if (!filas.length) {
             fragmento.append(el('tr', {}, el('td', { colspan: columnas.length, class: 'tabla-vacia' },

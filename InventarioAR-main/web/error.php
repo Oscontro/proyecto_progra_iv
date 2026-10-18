@@ -30,7 +30,7 @@ $codigo = (string)($_GET['codigo'] ?? '');
     ?? [400, 'Ocurrió un error', 'No se pudo completar la operación.', ['Volver al inicio', 'index.php']];
 
 http_response_code($estado);
-encabezado($titulo);
+encabezado($titulo, '', ['noindex' => true]);
 ?>
 <section class="caja-formulario caja-error" role="alert">
     <p class="error-icono" aria-hidden="true">⚠️</p>

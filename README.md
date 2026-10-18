@@ -64,6 +64,7 @@ Proyecto Integrador (2º parcial) · Programación IV · HTML5, CSS, JavaScript,
 ## Tecnologías
 
 - **Frontend:** HTML5, CSS y JavaScript (módulos ES, sin frameworks). Excel en el navegador con [SheetJS](https://sheetjs.com/) (`web/vendor/sheetjs`, licencia Apache 2.0).
+  Tipografía IBM Plex servida desde el propio sitio (`web/fonts`, licencia SIL OFL 1.1).
 - **Backend:** PHP 8.1 o superior (probado con 8.2) con PDO. Las páginas públicas son PHP que genera HTML; la aplicación consulta una API JSON (`php/*.php`).
 - **Base de datos:** MariaDB 10.4 (probado; un MySQL compatible también debería funcionar). Solo tablas
   InnoDB con claves foráneas: no usa vistas, triggers ni procedimientos almacenados, que los hostings

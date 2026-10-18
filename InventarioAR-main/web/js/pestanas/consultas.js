@@ -9,7 +9,7 @@ import { el, aviso, confirmar, campoSelect, dialogo } from '../ui.js';
 import { tablaSeleccionable } from '../tabla_seleccionable.js';
 
 const COLUMNAS = [
-    { clave: 'estado_texto', titulo: 'Estado' },
+    { clave: 'estado_texto', titulo: 'Estado', pildora: true },
     { clave: 'fecha', titulo: 'Fecha' },
     { clave: 'nombre', titulo: 'Nombre' },
     { clave: 'email', titulo: 'Email' },
@@ -65,7 +65,7 @@ export function montar(contenedor, { api }) {
         try {
             completas = (await api.get('contactos.php')).map((c) => ({
                 ...c,
-                estado_texto: c.leido ? 'Leída' : '● Nueva',
+                estado_texto: c.leido ? 'Leída' : 'Nueva',
                 usuario_texto: c.usuario ?? 'Visitante',
             }));
             const nuevas = completas.filter((c) => !c.leido).length;

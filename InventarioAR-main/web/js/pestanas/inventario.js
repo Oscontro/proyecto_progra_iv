@@ -6,7 +6,7 @@
 // su programación de canales), envío a papelera y envío a reparación (taller).
 
 import { ApiError, SesionExpirada, ClavePendiente } from '../api.js';
-import { el, aviso, textoCelda, campoSelect, llenarSelect, dialogoFormulario } from '../ui.js';
+import { el, aviso, textoCelda, campoSelect, llenarSelect, dialogoFormulario, campoSugerencias } from '../ui.js';
 import { exportarExcel, fechaArchivo } from '../excel.js';
 import { tablaSeleccionable } from '../tabla_seleccionable.js';
 import { verHistorialEquipo } from '../historial.js';
@@ -17,10 +17,10 @@ const COLUMNAS = [
     { clave: 'tipo', titulo: 'Tipo' },
     { clave: 'marca', titulo: 'Marca' },
     { clave: 'modelo_equipo', titulo: 'Modelo' },
-    { clave: 'numero_serie', titulo: 'N° Serie' },
+    { clave: 'numero_serie', titulo: 'N° Serie', mono: true },
     { clave: 'escala', titulo: 'Escala' },
     { clave: 'sector', titulo: 'Sector' },
-    { clave: 'estado', titulo: 'Estado' },
+    { clave: 'estado', titulo: 'Estado', pildora: true },
     { clave: 'ult_observacion', titulo: 'Observaciones' },
 ];
 
@@ -255,8 +255,12 @@ export function montar(contenedor, { api }) {
         const serie = el('input', { type: 'text', id: 'ed-serie', value: equipo.numero_serie, readonly: true });
         const selEscala = el('select', { id: 'ed-escala', required: true });
         // Sector y estado son texto libre en la base: se sugieren los existentes.
-        const sector = el('input', { type: 'text', id: 'ed-sector', list: 'ed-sectores', maxlength: 100, autocomplete: 'off', required: true });
-        const estadoEq = el('input', { type: 'text', id: 'ed-estado', list: 'ed-estados', maxlength: 100, autocomplete: 'off', required: true });
+        const sugSector = campoSugerencias({ id: 'ed-sector', maxlength: 100, required: true });
+        const sugEstado = campoSugerencias({ id: 'ed-estado', maxlength: 100, required: true });
+        const sector = sugSector.input;
+        const estadoEq = sugEstado.input;
+        sugSector.sugerir(sectores.map((s) => s.sector));
+        sugEstado.sugerir(estados.map((e) => e.estado));
         const selPotencia = el('select', { id: 'ed-potencia' });
         const observaciones = el('textarea', { id: 'ed-observaciones', maxlength: 255, placeholder: 'Observaciones adicionales…' });
         const resumenProg = el('span', { class: 'texto-suave' }, resumenProgramacion(programacion));
@@ -270,15 +274,13 @@ export function montar(contenedor, { api }) {
         estadoEq.value = equipo.estado ?? '';
         observaciones.value = equipo.ult_observacion ?? '';
 
-        const campo = (control, etiqueta) => el('div', { class: 'campo' }, el('label', { for: control.id }, etiqueta), control);
+        const campo = (control, etiqueta, nodo = control) => el('div', { class: 'campo' }, el('label', { for: control.id }, etiqueta), nodo);
 
         dialogoFormulario(`Modificar equipo · ${equipo.numero_serie}`, [
             el('div', { class: 'rejilla-form' },
                 campo(selTipo, 'Tipo'), campo(selMarca, 'Marca'), campo(selModelo, 'Modelo'),
                 campo(serie, 'N° de serie'), campo(selEscala, 'Escala'), campo(selPotencia, 'Potencia'),
-                campo(sector, 'Sector'), campo(estadoEq, 'Estado')),
-            el('datalist', { id: 'ed-sectores' }, sectores.map((s) => el('option', { value: s.sector }))),
-            el('datalist', { id: 'ed-estados' }, estados.map((e) => el('option', { value: e.estado }))),
+                campo(sector, 'Sector', sugSector.nodo), campo(estadoEq, 'Estado', sugEstado.nodo)),
             el('label', {}, 'Programación'),
             el('div', { class: 'fila-programacion' }, btnProg, resumenProg),
             el('label', { for: observaciones.id }, 'Observaciones'),

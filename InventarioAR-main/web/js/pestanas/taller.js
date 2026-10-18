@@ -34,12 +34,12 @@ const COLUMNAS = [
     { clave: 'tipo', titulo: 'Tipo' },
     { clave: 'marca', titulo: 'Marca' },
     { clave: 'modelo_equipo', titulo: 'Modelo' },
-    { clave: 'serie', titulo: 'N° Serie' },
+    { clave: 'serie', titulo: 'N° Serie', mono: true },
     { clave: 'taller', titulo: 'Taller' },
     { clave: 'fecha_recepcion', titulo: 'Fecha recepción' },
     { clave: 'fecha_ingreso', titulo: 'Fecha ingreso' },
     { clave: 'dias', titulo: 'Días' },
-    { clave: 'estado_taller', titulo: 'Estado' },
+    { clave: 'estado_taller', titulo: 'Estado', pildora: true },
     { clave: 'observaciones', titulo: 'Observaciones' },
 ];
 

@@ -181,6 +181,115 @@ export function campoSelect(etiqueta, opciones, { id, alCambiar } = {}) {
     return { nodo: el('div', { class: 'campo' }, el('label', { for: id }, etiqueta), select), select };
 }
 
+// ─────────────────────────────────────────────────────────
+// Texto con sugerencias: se elige de la lista o se escribe un valor libre.
+// Reemplaza a <datalist>, cuyo desplegable dibuja el navegador sin estilo y
+// fuera de lugar. Al elegir dispara 'input' y 'change' como el nativo.
+//
+//   const c = campoSugerencias({ id: 'ing-marca', maxlength: 100 });
+//   contenedor.append(c.nodo);  c.sugerir(['Motorola', 'ICOM']);  c.input.value
+// ─────────────────────────────────────────────────────────
+export function campoSugerencias(atributos = {}) {
+    let valores = [];
+    let activo = -1;
+    const lista = el('ul', { class: 'sugerencias', role: 'listbox', id: `${atributos.id}-lista`, hidden: true });
+    const input = el('input', {
+        type: 'text', autocomplete: 'off', role: 'combobox', 'aria-autocomplete': 'list',
+        'aria-expanded': 'false', 'aria-controls': lista.id, ...atributos,
+    });
+    const normal = (t) => t.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+
+    // filtrar: al escribir se muestran las que coinciden; al hacer clic, todas.
+    function abrir(filtrar = false) {
+        const texto = filtrar ? normal(input.value.trim()) : '';
+        const items = texto ? valores.filter((v) => normal(v).includes(texto)) : valores;
+        if (!items.length || (filtrar && items.length === 1 && items[0] === input.value)) {
+            cerrar();
+            return;
+        }
+        activo = -1;
+        lista.replaceChildren(...items.map((v, i) => el('li', {
+            role: 'option', id: `${lista.id}-${i}`, 'aria-selected': 'false',
+            // mousedown (no click): elige antes de que el input pierda el foco
+            onmousedown: (evento) => { evento.preventDefault(); elegir(v); },
+        }, v)));
+        lista.hidden = false;
+        input.setAttribute('aria-expanded', 'true');
+        input.removeAttribute('aria-activedescendant');
+        ubicar();
+        addEventListener('scroll', ubicar, true);
+        addEventListener('resize', ubicar);
+        const actual = items.indexOf(input.value);
+        if (actual >= 0) marcar(actual);
+    }
+
+    function cerrar() {
+        lista.hidden = true;
+        activo = -1;
+        input.setAttribute('aria-expanded', 'false');
+        input.removeAttribute('aria-activedescendant');
+        removeEventListener('scroll', ubicar, true);
+        removeEventListener('resize', ubicar);
+    }
+
+    // Posición fija bajo el campo y con su mismo ancho: así no la recortan los
+    // contenedores con scroll (diálogos). Si abajo no entra, se abre hacia arriba.
+    function ubicar() {
+        const r = input.getBoundingClientRect();
+        const abajo = innerHeight - r.bottom;
+        const arriba = abajo < 200 && r.top > abajo;
+        lista.style.left = `${r.left}px`;
+        lista.style.width = `${r.width}px`;
+        lista.style.top = arriba ? '' : `${r.bottom + 4}px`;
+        lista.style.bottom = arriba ? `${innerHeight - r.top + 4}px` : '';
+        lista.style.maxHeight = `${Math.min(260, (arriba ? r.top : abajo) - 16)}px`;
+    }
+
+    function marcar(indice) {
+        const opciones = [...lista.children];
+        activo = (indice + opciones.length) % opciones.length;
+        opciones.forEach((o, i) => o.setAttribute('aria-selected', String(i === activo)));
+        input.setAttribute('aria-activedescendant', opciones[activo].id);
+        opciones[activo].scrollIntoView({ block: 'nearest' });
+    }
+
+    function elegir(valor) {
+        input.value = valor;
+        cerrar();
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    input.addEventListener('click', () => abrir());
+    input.addEventListener('input', (evento) => { if (evento.isTrusted) abrir(true); });
+    input.addEventListener('blur', cerrar);
+    input.addEventListener('keydown', (evento) => {
+        if (evento.key === 'ArrowDown') {
+            evento.preventDefault();
+            if (lista.hidden) abrir();
+            if (!lista.hidden) marcar(activo + 1);
+        } else if (evento.key === 'ArrowUp' && !lista.hidden) {
+            evento.preventDefault();
+            marcar(activo - 1);
+        } else if (evento.key === 'Enter' && !lista.hidden && activo >= 0) {
+            evento.preventDefault();
+            elegir(lista.children[activo].textContent);
+        } else if (evento.key === 'Escape' && !lista.hidden) {
+            evento.preventDefault();   // en un diálogo, cierra la lista y no el diálogo
+            cerrar();
+        }
+    });
+
+    return {
+        nodo: el('div', { class: 'combo' }, input, lista),
+        input,
+        sugerir(nuevos) {
+            valores = [...new Set(nuevos.filter(Boolean))];
+            if (!lista.hidden) abrir(true);
+        },
+    };
+}
+
 /** Reemplaza las opciones conservando la elegida si sigue existiendo. */
 export function llenarSelect(select, opciones) {
     const anterior = select.value;

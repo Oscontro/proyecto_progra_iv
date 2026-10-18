@@ -15,7 +15,7 @@ const COLUMNAS = [
     { clave: 'tipo', titulo: 'Tipo' },
     { clave: 'marca', titulo: 'Marca' },
     { clave: 'modelo_equipo', titulo: 'Modelo' },
-    { clave: 'numero_serie', titulo: 'N° Serie' },
+    { clave: 'numero_serie', titulo: 'N° Serie', mono: true },
     { clave: 'escala', titulo: 'Escala' },
     { clave: 'sector', titulo: 'Sector' },
     { clave: 'fecha_eliminacion', titulo: 'Fecha de eliminación' },

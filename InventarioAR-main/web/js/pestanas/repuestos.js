@@ -85,7 +85,7 @@ export function montar(contenedor, { api, usuario }) {
 
     function crearTabla() {
         const columnas = [
-            { clave: '_estado', titulo: 'Estado' },
+            { clave: '_estado', titulo: 'Estado', pildora: true },
             { clave: 'numero_parte', titulo: 'N° de parte' },
             { clave: 'nombre', titulo: 'Nombre' },
             { clave: '_compat', titulo: 'Compatible con' },
@@ -129,7 +129,7 @@ export function montar(contenedor, { api, usuario }) {
         fila._ultimoIso = ultimo;
         fila._compat = textoCompatible(r.modelos);
         // Indicador con ícono + texto (nunca solo color).
-        fila._estado = stock === 0 ? '⛔ Sin stock' : stock <= UMBRAL_BAJO ? '⚠️ Bajo' : '✅ OK';
+        fila._estado = stock === 0 ? 'Sin stock' : stock <= UMBRAL_BAJO ? 'Stock bajo' : 'OK';
         return fila;
     }
 

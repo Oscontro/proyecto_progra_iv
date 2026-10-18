@@ -35,7 +35,7 @@ const COLUMNAS = [
     { clave: 'apellido', titulo: 'Apellido' },
     { clave: 'email', titulo: 'Email' },
     { clave: 'perfil', titulo: 'Perfil' },
-    { clave: 'activo_texto', titulo: 'Estado' },
+    { clave: 'activo_texto', titulo: 'Estado', pildora: true },
     { clave: 'cambiar_clave_texto', titulo: 'Debe cambiar clave' },
     { clave: 'bloqueado_hasta', titulo: 'Bloqueado hasta' },
     { clave: 'ultima_conexion', titulo: 'Última conexión' },
@@ -89,7 +89,7 @@ export function montar(contenedor, { api, usuario: sesion }) {
         try {
             completos = (await api.get('usuarios.php')).map((u) => ({
                 ...u,
-                activo_texto: { activo: 'Activo', inactivo: 'Desactivado', pendiente: '⏳ Pendiente' }[estadoDe(u)],
+                activo_texto: { activo: 'Activo', inactivo: 'Desactivado', pendiente: 'Pendiente' }[estadoDe(u)],
                 cambiar_clave_texto: u.debe_cambiar_clave ? 'Sí' : 'No',
             }));
             mostrarPendientes();

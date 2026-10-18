@@ -1,0 +1,11 @@
+# Solo las páginas públicas de web/ se indexan.
+# La API, la aplicación y las imágenes internas no.
+User-agent: *
+Disallow: /php/
+Disallow: /web/app.php
+Disallow: /web/error.php
+Disallow: /web/salir.php
+Disallow: /web/vendor/
+
+# Al publicar, reemplazar por la dirección real del sitio:
+# Sitemap: https://TU-DOMINIO/web/sitemap.php

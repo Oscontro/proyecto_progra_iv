@@ -10,7 +10,7 @@
 // antes de crearlos (decisión de la migración: nada se crea sin avisar).
 
 import { ApiError, SesionExpirada, ClavePendiente } from '../api.js';
-import { el, aviso, confirmar, dialogo } from '../ui.js';
+import { el, aviso, confirmar, dialogo, campoSugerencias } from '../ui.js';
 import { leerExcel, exportarExcel, fechaArchivo } from '../excel.js';
 import { editarProgramacion, resumenProgramacion } from '../programacion.js';
 
@@ -37,11 +37,10 @@ export function montar(contenedor, { api }) {
     let programacion = null; // null = sin programación
 
     // ── Campos (texto con sugerencias: se elige o se escribe) ──
-    const listas = {};
+    const combos = {};
     const campo = (id, etiqueta, atributos = {}) => {
-        listas[id] = el('datalist', { id: `${id}-lista` });
-        const input = el('input', { type: 'text', id, list: listas[id].id, autocomplete: 'off', ...atributos });
-        return { input, nodo: el('div', { class: 'campo' }, el('label', { for: id }, etiqueta), input, listas[id]) };
+        combos[id] = campoSugerencias({ id, ...atributos });
+        return { input: combos[id].input, nodo: el('div', { class: 'campo' }, el('label', { for: id }, etiqueta), combos[id].nodo) };
     };
     const fTipo = campo('ing-tipo', 'Tipo de equipo', { maxlength: 100 });
     const fMarca = campo('ing-marca', 'Marca', { maxlength: 100 });
@@ -121,7 +120,7 @@ export function montar(contenedor, { api }) {
     }
 
     function sugerir(id, valores) {
-        listas[id].replaceChildren(...[...new Set(valores.filter(Boolean))].map((v) => el('option', { value: v })));
+        combos[id].sugerir(valores);
     }
 
     const mismoTexto = (a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }) === 0;
