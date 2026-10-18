@@ -8,8 +8,8 @@
 #   publicacion/htdocs/        lo que va dentro de htdocs/ del hosting
 #   publicacion/htdocs.zip     lo mismo comprimido
 #
-# Solo incluye lo que el sitio necesita: index.php, .htaccess, web/, php/
-# y resources/. Quedan afuera el cliente de escritorio (Python), db/, tools/,
+# Solo incluye lo que el sitio necesita: index.php, .htaccess, robots.txt,
+# web/, php/ y resources/. Quedan afuera el cliente de escritorio (Python), db/, tools/,
 # retirado/, los logs y config.local.php (el de desarrollo).
 #
 # Si existe InventarioAR-main/php/config.hosting.php (no se versiona: tiene
@@ -24,7 +24,7 @@ mkdir -p "$SALIDA"
 rm -rf "${SALIDA:?}"/* # se vacía, no se borra: puede estar abierta en el Explorador
 mkdir -p "$DESTINO"
 
-cp "$ORIGEN/index.php" "$ORIGEN/.htaccess" "$DESTINO/"
+cp "$ORIGEN/index.php" "$ORIGEN/.htaccess" "$ORIGEN/robots.txt" "$DESTINO/"
 cp -r "$ORIGEN/web" "$ORIGEN/resources" "$DESTINO/"
 
 mkdir -p "$DESTINO/php/logs"
