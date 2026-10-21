@@ -21,6 +21,7 @@ header("Content-Security-Policy: default-src 'self'; img-src 'self' data:; style
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Sistema · <?= e(NOMBRE_SISTEMA) ?></title>
     <link rel="icon" href="img/logo.svg" type="image/svg+xml">
+    <script src="js/tema.js"></script>
     <link rel="stylesheet" href="css/app.css">
     <script type="module" src="js/app.js"></script>
 </head>
@@ -91,23 +92,59 @@ header("Content-Security-Policy: default-src 'self'; img-src 'self' data:; style
 
     <template id="tpl-principal">
         <div class="principal">
-            <header class="barra">
-                <a class="barra-inicio" href="index.php" title="Ir a la portada">
-                    <img class="barra-logo" src="img/logo.svg" alt="Portada">
-                </a>
-                <h1 class="barra-titulo">Sistema de Inventario de Equipos de Radio</h1>
-                <div class="barra-usuario">
-                    <span class="barra-icono" data-ref="icono" aria-hidden="true"></span>
-                    <span>
-                        <strong data-ref="nombre"></strong>
-                        <small data-ref="rol"></small>
-                    </span>
+            <!-- Los íconos (js/iconos.js) los agrega js/app.js -->
+            <aside class="lateral">
+                <div class="lateral-marca">
+                    <a class="lateral-inicio" href="index.php" title="Ir a la portada">
+                        <img class="lateral-logo" src="img/logo.svg" alt="">
+                        <span class="lateral-nombre lateral-texto">
+                            <strong>Inventario</strong>
+                            <small>Equipos de radio</small>
+                        </span>
+                    </a>
+                    <button type="button" class="lateral-colapsar" data-ref="colapsar"
+                            aria-label="Achicar el menú" aria-expanded="true"></button>
+                    <!-- Solo en pantallas angostas: abre y cierra el menú -->
+                    <button type="button" class="lateral-hamburguesa" data-ref="hamburguesa"
+                            aria-label="Menú" aria-expanded="false" aria-controls="menu-app"></button>
                 </div>
-                <button type="button" class="btn btn-barra" data-ref="cambiar-clave">Cambiar contraseña</button>
-                <button type="button" class="btn btn-peligro" data-ref="salir">🚪 Salir</button>
-            </header>
-            <nav class="pestanas" role="tablist" aria-label="Secciones" data-ref="pestanas"></nav>
-            <div class="paneles" data-ref="paneles"></div>
+
+                <div class="lateral-menu" id="menu-app">
+                    <p class="lateral-titulo" aria-hidden="true">Menú</p>
+                    <nav class="pestanas" role="tablist" aria-label="Secciones" aria-orientation="vertical"
+                         data-ref="pestanas"></nav>
+
+                    <div class="lateral-pie">
+                        <div class="usuario">
+                            <span class="usuario-avatar" data-ref="icono" aria-hidden="true"></span>
+                            <span class="usuario-datos lateral-texto">
+                                <strong data-ref="nombre"></strong>
+                                <small data-ref="rol"></small>
+                            </span>
+                        </div>
+                        <button type="button" class="lateral-accion" data-ref="cambiar-clave" title="Cambiar contraseña">
+                            <span class="lateral-texto">Cambiar contraseña</span>
+                        </button>
+                        <button type="button" class="lateral-accion lateral-salir" data-ref="salir" title="Cerrar sesión">
+                            <span class="lateral-texto">Salir</span>
+                        </button>
+                    </div>
+                </div>
+            </aside>
+
+            <div class="contenido">
+                <header class="contenido-cabecera">
+                    <div>
+                        <h1 data-ref="saludo"></h1>
+                        <p>Sistema de Inventario de Equipos de Radio</p>
+                    </div>
+                    <div class="contenido-herramientas">
+                        <button type="button" class="btn btn-tema" data-ref="tema"
+                                aria-label="Modo oscuro" aria-pressed="false" title="Cambiar entre modo claro y oscuro"></button>
+                    </div>
+                </header>
+                <div class="paneles" data-ref="paneles"></div>
+            </div>
         </div>
     </template>
 </body>

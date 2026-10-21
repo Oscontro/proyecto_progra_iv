@@ -10,6 +10,7 @@
 import { api, ApiError, SesionExpirada, ClavePendiente } from './api.js';
 import { plantilla, aviso, confirmar, ocupado, el } from './ui.js';
 import { pestanasPara } from './pestanas.js';
+import { icono } from './iconos.js';
 
 const raiz = document.getElementById('app');
 
@@ -32,6 +33,35 @@ function mostrarVista(nodo) {
 function mostrarError(parrafo, mensaje) {
     parrafo.textContent = mensaje;
     parrafo.hidden = !mensaje;
+}
+
+// Preferencias del navegador (tema, menú achicado). Si el almacenamiento está
+// bloqueado, la aplicación funciona igual con los valores por defecto.
+function leerPreferencia(clave) {
+    try {
+        return localStorage.getItem(clave);
+    } catch {
+        return null;
+    }
+}
+
+function guardarPreferencia(clave, valor) {
+    try {
+        localStorage.setItem(clave, valor);
+    } catch {
+        // sin almacenamiento: la elección dura hasta recargar
+    }
+}
+
+// El tema inicial lo pone js/tema.js antes de pintar la página.
+function temaOscuro() {
+    return document.documentElement.dataset.tema === 'oscuro';
+}
+
+function alternarTema() {
+    const tema = temaOscuro() ? 'claro' : 'oscuro';
+    document.documentElement.dataset.tema = tema;
+    guardarPreferencia('tema', tema);
 }
 
 /** Sin sesión válida la aplicación no se muestra: página de error de acceso. */
@@ -160,9 +190,66 @@ function vistaPrincipal() {
     const usuario = usuarioActual;
     const ctx = { api, usuario };
 
-    r.icono.textContent = usuario.es_admin ? '👨‍💼' : '👤';
-    r.nombre.textContent = `Usuario: ${usuario.username}`;
+    r.icono.textContent = usuario.username.charAt(0);
+    r.nombre.textContent = usuario.username;
     r.rol.textContent = usuario.es_admin ? 'Administrador' : 'Usuario';
+    r.saludo.textContent = `Hola, ${usuario.username}`;
+
+    r['cambiar-clave'].prepend(icono('llave'));
+    r.salir.prepend(icono('salir'));
+    r.colapsar.append(icono('colapsar'));
+    r.tema.append(icono('luna', 'icono-luna'), icono('sol', 'icono-sol'));
+
+    r.tema.setAttribute('aria-pressed', String(temaOscuro()));
+    r.tema.addEventListener('click', () => {
+        alternarTema();
+        r.tema.setAttribute('aria-pressed', String(temaOscuro()));
+    });
+
+    const colapsar = (colapsada) => {
+        vista.classList.toggle('colapsada', colapsada);
+        r.colapsar.setAttribute('aria-expanded', String(!colapsada));
+        r.colapsar.setAttribute('aria-label', colapsada ? 'Agrandar el menú' : 'Achicar el menú');
+    };
+    colapsar(leerPreferencia('menu') === 'colapsado');
+    r.colapsar.addEventListener('click', () => {
+        const colapsada = !vista.classList.contains('colapsada');
+        colapsar(colapsada);
+        guardarPreferencia('menu', colapsada ? 'colapsado' : 'abierto');
+    });
+
+    // Menú hamburguesa (pantallas angostas): se cierra al elegir una sección,
+    // con Escape, al tocar fuera del menú o al pasar a pantalla ancha.
+    r.hamburguesa.append(icono('menu', 'icono-menu'), icono('cerrar', 'icono-cerrar'));
+    const abrirMenu = (abierto) => {
+        vista.classList.toggle('menu-abierto', abierto);
+        r.hamburguesa.setAttribute('aria-expanded', String(abierto));
+        r.hamburguesa.setAttribute('aria-label', abierto ? 'Cerrar el menú' : 'Menú');
+    };
+    r.hamburguesa.addEventListener('click', () => abrirMenu(!vista.classList.contains('menu-abierto')));
+    const pantallaAncha = matchMedia('(min-width: 901px)');
+    pantallaAncha.addEventListener('change', (consulta) => {
+        if (consulta.matches) abrirMenu(false);
+    });
+    // Oyentes del documento: se descartan solos cuando esta vista ya no está en pantalla.
+    const alTeclaOClic = (evento) => {
+        if (!raiz.contains(vista)) {
+            document.removeEventListener('keydown', alTeclaOClic);
+            document.removeEventListener('click', alTeclaOClic);
+            return;
+        }
+        if (!vista.classList.contains('menu-abierto')) {
+            return;
+        }
+        if (evento.type === 'keydown' && evento.key === 'Escape') {
+            abrirMenu(false);
+            r.hamburguesa.focus();
+        } else if (evento.type === 'click' && !evento.target.closest('.lateral')) {
+            abrirMenu(false);
+        }
+    };
+    document.addEventListener('keydown', alTeclaOClic);
+    document.addEventListener('click', alTeclaOClic);
 
     r.salir.addEventListener('click', async () => {
         const ok = await confirmar('Cerrar sesión', '¿Está seguro que desea cerrar la sesión?',
@@ -181,8 +268,12 @@ function vistaPrincipal() {
         const boton = el('button', {
             type: 'button', role: 'tab', id: `tab-${pestana.id}`,
             'aria-controls': `panel-${pestana.id}`, 'aria-selected': 'false', tabindex: '-1',
-            onclick: () => activar(pestana.id),
-        }, el('span', { 'aria-hidden': 'true' }, pestana.icono), ` ${pestana.titulo}`);
+            onclick: () => {
+                abrirMenu(false);
+                activar(pestana.id);
+            },
+            title: pestana.titulo,
+        }, icono(pestana.id), el('span', { class: 'lateral-texto' }, pestana.titulo));
         botones.set(pestana.id, boton);
         r.pestanas.append(boton);
     }
@@ -195,8 +286,9 @@ function vistaPrincipal() {
             return;
         }
         let destino = null;
-        if (evento.key === 'ArrowRight') destino = (actual + 1) % ids.length;
-        if (evento.key === 'ArrowLeft') destino = (actual - 1 + ids.length) % ids.length;
+        // Vertical en pantalla ancha, horizontal en la angosta: valen las cuatro flechas.
+        if (evento.key === 'ArrowDown' || evento.key === 'ArrowRight') destino = (actual + 1) % ids.length;
+        if (evento.key === 'ArrowUp' || evento.key === 'ArrowLeft') destino = (actual - 1 + ids.length) % ids.length;
         if (evento.key === 'Home') destino = 0;
         if (evento.key === 'End') destino = ids.length - 1;
         if (destino !== null) {

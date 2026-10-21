@@ -40,7 +40,7 @@ export function montar(contenedor, { api, usuario }) {
 
     const detalle = el('section', { class: 'detalle-repuesto', 'aria-live': 'polite' });
     let tabla = null;   // se crea al conocer los talleres (columnas dinámicas)
-    const zonaTabla = el('div');
+    const zonaTabla = el('div', { class: 'zona-tabla' });
 
     contenedor.append(
         el('div', { class: 'cabecera-pestana' }, el('h2', {}, 'Stock de repuestos'), estado,

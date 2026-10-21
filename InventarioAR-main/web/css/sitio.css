@@ -1,12 +1,5 @@
 /* Páginas públicas (portada, contacto, registro, ingreso, error).
-   Usa las variables y componentes de app.css. */
-
-/* IBM Plex (licencia SIL OFL 1.1, ver fonts/OFL.txt), servida desde el propio sitio:
-   la CSP no permite hojas de estilo ni fuentes de otros dominios. */
-@font-face { font-family: "IBM Plex Sans"; font-weight: 400; font-style: normal; font-display: swap; src: url("../fonts/plex-sans-400.woff2") format("woff2"); }
-@font-face { font-family: "IBM Plex Sans"; font-weight: 600; font-style: normal; font-display: swap; src: url("../fonts/plex-sans-600.woff2") format("woff2"); }
-@font-face { font-family: "IBM Plex Sans"; font-weight: 700; font-style: normal; font-display: swap; src: url("../fonts/plex-sans-700.woff2") format("woff2"); }
-@font-face { font-family: "IBM Plex Mono"; font-weight: 500; font-style: normal; font-display: swap; src: url("../fonts/plex-mono-500.woff2") format("woff2"); }
+   Usa las variables, componentes y fuentes (IBM Plex) de app.css. */
 
 .sitio {
     --tinta: #0e1a2b;
