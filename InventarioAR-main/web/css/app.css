@@ -1,6 +1,6 @@
 /* Estilos de la aplicación web. Paleta tomada del cliente de escritorio (azules Material).
    Dos temas: claro (por defecto) y oscuro con html[data-tema="oscuro"], que pone js/tema.js.
-   Las páginas públicas también cargan este archivo, pero no el tema: siempre se ven claras. */
+   Las páginas públicas también cargan este archivo (variables y componentes) más sitio.css. */
 
 /* IBM Plex (licencia SIL OFL 1.1, ver fonts/OFL.txt), servida desde el propio sitio:
    la CSP no permite hojas de estilo ni fuentes de otros dominios. */

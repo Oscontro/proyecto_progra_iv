@@ -1,8 +1,8 @@
 // Tema claro/oscuro de la aplicación.
-// Script clásico (no módulo) cargado en el <head> de app.php antes de la hoja de estilos,
-// para que la página se pinte directamente con el tema correcto, sin parpadeo.
-// Sin elección guardada se sigue la preferencia del sistema operativo.
-// El botón que lo cambia está en js/app.js (alternarTema).
+// Script clásico (no módulo) cargado en el <head> de app.php y de las páginas públicas
+// antes de la hoja de estilos, para que la página se pinte directamente con el tema
+// correcto, sin parpadeo. Sin elección guardada se sigue la preferencia del sistema.
+// Los botones que lo cambian están en js/app.js (alternarTema) y js/sitio.js.
 
 (function () {
     var guardado = null;

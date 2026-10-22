@@ -64,9 +64,11 @@ function encabezado(string $titulo, string $activa = '', array $opciones = []): 
     <link rel="icon" href="img/logo.svg" type="image/svg+xml">
     <link rel="preload" href="fonts/plex-sans-400.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="preload" href="fonts/plex-sans-700.woff2" as="font" type="font/woff2" crossorigin>
+    <script src="js/tema.js"></script>
     <link rel="stylesheet" href="css/app.css">
     <link rel="stylesheet" href="css/sitio.css">
     <script src="js/menu.js" defer></script>
+    <script src="js/sitio.js" defer></script>
     <?php if (!empty($opciones['jsonld'])): ?>
     <script type="application/ld+json"><?= json_encode($opciones['jsonld'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP) ?></script>
     <?php endif; ?>
@@ -82,11 +84,19 @@ function encabezado(string $titulo, string $activa = '', array $opciones = []): 
                     <small>Equipos de radio</small>
                 </span>
             </a>
-            <button type="button" class="menu-boton" aria-expanded="false" aria-controls="menu-principal" hidden>
-                <svg class="menu-icono-abrir" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
-                <svg class="menu-icono-cerrar" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
-                <span class="solo-lectores">Menú</span>
-            </button>
+            <div class="cabecera-acciones">
+                <!-- Modo claro/oscuro (js/sitio.js); sin JavaScript queda oculto -->
+                <button type="button" class="btn btn-tema" aria-label="Modo oscuro" aria-pressed="false"
+                        title="Cambiar entre modo claro y oscuro" hidden>
+                    <svg class="icono icono-luna" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8Z"/></svg>
+                    <svg class="icono icono-sol" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm0-14v2m0 16v2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4M2 12h2m16 0h2M6.3 17.7l-1.4 1.4M19.1 4.9l-1.4 1.4"/></svg>
+                </button>
+                <button type="button" class="menu-boton" aria-expanded="false" aria-controls="menu-principal" hidden>
+                    <svg class="menu-icono-abrir" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+                    <svg class="menu-icono-cerrar" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+                    <span class="solo-lectores">Menú</span>
+                </button>
+            </div>
             <nav class="sitio-menu" id="menu-principal" aria-label="Menú principal">
                 <ul>
                     <?php foreach ($items as [$id, $url, $texto]): ?>
