@@ -70,7 +70,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         bd()->prepare("UPDATE contactos SET mail_enviado = ? WHERE id_contacto = ?")->execute([(int)$enviado, $id]);
 
         registrarEnvioFormulario('contacto');
-        flash('contacto_ok', ['id' => $id, 'mail' => $enviado]);
+        flash('contacto_ok', true);
         redirigir('contacto.php');
     }
 }
@@ -98,12 +98,7 @@ encabezado('Contacto', 'contacto', [
     <section class="contacto-formulario" aria-labelledby="titulo-consulta">
         <h2 id="titulo-consulta">Envianos tu consulta</h2>
         <?php if ($enviada): ?>
-            <p class="mensaje-info" role="status">
-                ¡Gracias! Recibimos tu consulta (n.º <?= (int)$enviada['id'] ?>) y te vamos a responder por email.
-                <?php if (!$enviada['mail']): ?>
-                    <br><small>Quedó registrada en el sistema; el aviso por correo no está disponible en este servidor.</small>
-                <?php endif; ?>
-            </p>
+            <p class="mensaje-info" role="status">¡Gracias! Recibimos tu consulta.</p>
         <?php endif; ?>
         <?php if ($error): ?>
             <p class="mensaje-error" role="alert"><?= e($error) ?></p>
