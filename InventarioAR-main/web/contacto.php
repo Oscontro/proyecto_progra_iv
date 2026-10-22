@@ -1,8 +1,9 @@
 <?php
 // Contacto: mapa de Google y formulario de consulta. La consulta se guarda
-// en la tabla contactos y se envía con mail() a una dirección simulada
-// (CONTACTO_DESTINO en php/config.php).
+// en la tabla contactos y se envía por correo a CONTACTO_DESTINO (php/config.php):
+// con Resend si hay API key, si no con mail() (ver php/correo.php).
 require_once __DIR__ . '/inc/inicio.php';
+require_once __DIR__ . '/../php/correo.php';
 
 const MENSAJE_MINIMO = 10;
 const MENSAJE_MAXIMO = 3000;
@@ -29,23 +30,20 @@ function errorConsulta(array $c): ?string {
     return null;
 }
 
-/** Envía la consulta con mail(). Devuelve si el servidor aceptó el envío. */
+/** Envía la consulta por correo (Resend o mail(), ver php/correo.php). */
 function enviarConsulta(array $c, int $id): bool {
-    $asunto = '=?UTF-8?B?' . base64_encode("[Consulta #$id] " . $c['asunto']) . '?=';
-    $cuerpo = "Nueva consulta desde el formulario de contacto\n\n"
-            . "Nombre: {$c['nombre']}\nEmail: {$c['email']}\nFecha: " . date('d/m/Y H:i') . "\n\n"
-            . $c['mensaje'] . "\n";
-    $cabeceras = implode("\r\n", [
-        'From: ' . MAIL_REMITENTE,
-        'Reply-To: ' . $c['email'],          // ya validado: no admite saltos de línea
-        'MIME-Version: 1.0',
-        'Content-Type: text/plain; charset=UTF-8',
-        'Content-Transfer-Encoding: 8bit',
-    ]);
-    // Muchos servidores (y los hostings gratuitos) no tienen el correo habilitado:
-    // el fallo se registra en la tabla y no interrumpe la consulta. Si mail()
-    // está en disable_functions ni siquiera existe, y llamarla sería un error fatal.
-    return function_exists('mail') && @mail(CONTACTO_DESTINO, $asunto, $cuerpo, $cabeceras);
+    $cuerpo = "Nueva consulta desde el formulario de contacto
+
+"
+            . "Nombre: {$c['nombre']}
+Email: {$c['email']}
+Fecha: " . date('d/m/Y H:i') . "
+
+"
+            . $c['mensaje'] . "
+";
+    // Responder al correo le contesta directamente a quien hizo la consulta.
+    return enviarCorreo(CONTACTO_DESTINO, "[Consulta #$id] " . $c['asunto'], $cuerpo, $c['email']);
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {

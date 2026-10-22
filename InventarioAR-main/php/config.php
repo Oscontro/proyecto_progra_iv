@@ -12,10 +12,17 @@ $config = [
     'db_pass'          => '',
     'db_name'          => 'inventario_radios',
     'api_debug'        => false, // true = los errores de BD llegan al cliente
-    // Formulario de contacto: mail() envía la consulta a esta dirección
-    // (simulada, como pide la consigna) y además se guarda en la tabla contactos.
+    // Formulario de contacto: la consulta se guarda en la tabla contactos y se
+    // envía por correo a esta dirección (simulada por defecto, como pide la consigna).
     'contacto_destino' => 'consultas@inventario-radios.test',
-    'mail_remitente'   => 'no-responder@inventario-radios.test',
+    'mail_remitente'   => 'no-responder@inventario-radios.test',   // remitente de mail()
+    // Correo por Resend (php/correo.php). La API key NO va acá: se pone en
+    // config.local.php (y en config.hosting.php para el hosting), que no se versionan.
+    // Vacía = se usa mail().
+    'resend_api_key'    => '',
+    // Sin dominio verificado en Resend hay que usar onboarding@resend.dev, que
+    // solo puede enviar al email de la propia cuenta de Resend (contacto_destino).
+    'resend_remitente'  => 'Inventario de Radios <onboarding@resend.dev>',
 ];
 if (is_file(__DIR__ . '/config.local.php')) {
     $config = array_merge($config, require __DIR__ . '/config.local.php');
@@ -32,6 +39,8 @@ date_default_timezone_set("America/Argentina/Buenos_Aires");
 define('API_DEBUG', (bool)$config['api_debug']);
 define('CONTACTO_DESTINO', $config['contacto_destino']);
 define('MAIL_REMITENTE', $config['mail_remitente']);
+define('RESEND_API_KEY', trim((string)$config['resend_api_key']));
+define('RESEND_REMITENTE', $config['resend_remitente']);
 
 // Los errores de PHP nunca se imprimen (romperían el JSON o mostrarían
 // rutas internas): se registran en logs/php_errores.log.

@@ -15,4 +15,17 @@ return [
     // 'api_debug'        => true,   // solo en desarrollo
     // 'contacto_destino' => 'consultas@inventario-radios.test',
     // 'mail_remitente'   => 'no-responder@tu-dominio',
+
+    // ═══ CORREO CON RESEND ═══════════════════════════════════════════════
+    // 👉 Pegá acá tu API key (https://resend.com/api-keys, empieza con "re_").
+    //    Sin key, el sistema usa mail() como antes.
+    // 'resend_api_key'   => 're_xxxxxxxxxxxxxxxxxxxxxxxx',
+    //
+    // 👉 Con el remitente de prueba onboarding@resend.dev, Resend solo envía al
+    //    email con el que creaste la cuenta: ponelo como destino de las consultas.
+    // 'contacto_destino' => 'el-email-de-tu-cuenta-de-resend@ejemplo.com',
+    //
+    // Si verificás un dominio propio en Resend (panel > Domains), podés usar
+    // un remitente de ese dominio y enviar a cualquier dirección:
+    // 'resend_remitente' => 'Inventario de Radios <no-responder@tu-dominio.com>',
 ];
