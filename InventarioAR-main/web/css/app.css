@@ -168,7 +168,7 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--primario); }
 
 label { display: block; margin: 1rem 0 0.35rem; font-weight: 600; }
 
-input[type="text"], input[type="password"] {
+input[type="text"], input[type="password"], input[type="email"] {
     width: 100%;
     min-height: 44px;
     padding: 0 0.8rem;
@@ -178,7 +178,7 @@ input[type="text"], input[type="password"] {
     background: var(--campo);
     color: var(--texto);
 }
-input[type="text"]:focus, input[type="password"]:focus { border-color: var(--primario); }
+input[type="text"]:focus, input[type="password"]:focus, input[type="email"]:focus { border-color: var(--primario); }
 
 .casilla { display: flex; align-items: center; gap: 0.5rem; font-weight: normal; }
 
@@ -218,21 +218,18 @@ input[type="text"]:focus, input[type="password"]:focus { border-color: var(--pri
 
 /* ─────────── Cambio de contraseña ─────────── */
 
-.acceso { display: flex; min-height: 100vh; }
+.acceso { display: flex; flex-direction: column; min-height: 100vh; }
 
-.acceso-marca {
-    flex: 0 0 400px;
+/* Barra superior con la marca (igual que la barra lateral) y el botón de tema */
+.acceso-barra {
     display: flex;
-    flex-direction: column;
-    justify-content: center;
-    gap: 1.5rem;
-    padding: 2.5rem 1.9rem;
-    background: linear-gradient(160deg, var(--azul) 0%, #0d47a1 100%);
-    color: #fff;
-    text-align: center;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1rem 1.5rem;
+    background: var(--lateral);
+    border-bottom: 1px solid var(--lateral-borde);
 }
-.acceso-icono { font-size: 4.5rem; }
-.acceso-sistema { margin: 0; font-size: 1.25rem; font-weight: bold; line-height: 1.4; }
 
 .acceso-panel {
     flex: 1;
@@ -240,6 +237,20 @@ input[type="text"]:focus, input[type="password"]:focus { border-color: var(--pri
     place-items: center;
     padding: 2rem 1rem;
 }
+
+.acceso-tarjeta h1 { margin: 0; font-size: 1.5rem; letter-spacing: -0.01em; }
+.acceso-icono {
+    display: grid;
+    place-items: center;
+    width: 48px;
+    height: 48px;
+    margin-bottom: 1rem;
+    border-radius: 12px;
+    background: var(--acento-fondo);
+    color: var(--acento);
+}
+.acceso-icono .icono { width: 24px; height: 24px; }
+.acceso-leyenda { margin: 0.35rem 0 1rem; color: var(--texto-suave); }
 
 /* ─────────── Ventana principal: barra lateral + contenido ─────────── */
 
@@ -539,9 +550,9 @@ input[type="text"]:focus, input[type="password"]:focus { border-color: var(--pri
 }
 
 @media (max-width: 760px) {
-    .acceso { flex-direction: column; }
-    .acceso-marca { flex: none; padding: 1.5rem 1rem; }
-    .acceso-icono { font-size: 3rem; }
+    .acceso-barra { padding: 0.75rem 1rem; }
+    .acceso-panel { place-items: start center; padding: 1.5rem 1rem; }
+    .tarjeta.acceso-tarjeta { padding: 1.5rem; }
 }
 
 /* ═══════════ Componentes de pestañas ═══════════ */
@@ -877,6 +888,7 @@ th[aria-sort="descending"] .th-orden::after { content: ' ▼'; opacity: 1; }
 .btn-advertencia:hover:not(:disabled) { background: #bf360c; }
 .rejilla-form { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 0 1rem; }
 .rejilla-form select, .rejilla-form input { width: 100%; }
+.rejilla-form select { min-height: 44px; padding: 0 0.8rem; }
 .rejilla-form input[readonly] { background: var(--campo-bloqueado); color: var(--tinta-tenue); font-weight: bold; }
 .fila-programacion { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
 

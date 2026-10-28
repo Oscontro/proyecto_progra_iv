@@ -58,13 +58,23 @@ header("Content-Security-Policy: default-src 'self'; img-src 'self' data:; style
 
     <template id="tpl-cambio-clave">
         <div class="acceso">
-            <aside class="acceso-marca">
-                <div class="acceso-icono" aria-hidden="true">🔒</div>
-                <p class="acceso-sistema" data-ref="leyenda"></p>
-            </aside>
+            <header class="acceso-barra">
+                <a class="lateral-inicio" href="index.php" title="Ir a la portada">
+                    <img class="lateral-logo" src="img/logo.svg" alt="">
+                    <span class="lateral-nombre">
+                        <strong>Inventario</strong>
+                        <small>Equipos de radio</small>
+                    </span>
+                </a>
+                <button type="button" class="btn btn-tema" data-ref="tema"
+                        aria-label="Modo oscuro" aria-pressed="false" title="Cambiar entre modo claro y oscuro"></button>
+            </header>
             <section class="acceso-panel">
-                <form class="tarjeta" data-ref="form" novalidate>
+                <!-- El ícono (js/iconos.js) lo agrega js/app.js -->
+                <form class="tarjeta acceso-tarjeta" data-ref="form" novalidate>
+                    <span class="acceso-icono" data-ref="icono"></span>
                     <h1>Cambiar contraseña</h1>
+                    <p class="acceso-leyenda" data-ref="leyenda"></p>
                     <p class="mensaje-info" data-ref="aviso" hidden>
                         Tu cuenta tiene una contraseña temporal. Para continuar, elegí una nueva.
                     </p>

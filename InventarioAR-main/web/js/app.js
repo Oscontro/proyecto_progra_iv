@@ -125,6 +125,14 @@ function vistaCambioClave({ obligatorio }) {
     const r = refs(vista);
     const form = r.form;
 
+    r.icono.append(icono('llave'));
+    r.tema.append(icono('luna', 'icono-luna'), icono('sol', 'icono-sol'));
+    r.tema.setAttribute('aria-pressed', String(temaOscuro()));
+    r.tema.addEventListener('click', () => {
+        alternarTema();
+        r.tema.setAttribute('aria-pressed', String(temaOscuro()));
+    });
+
     r.aviso.hidden = !obligatorio;
     r.leyenda.textContent = obligatorio
         ? 'Por seguridad, la contraseña temporal debe reemplazarse antes de usar el sistema.'
