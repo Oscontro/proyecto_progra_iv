@@ -16,9 +16,15 @@ $config = [
     // envía por correo a esta dirección (simulada por defecto, como pide la consigna).
     'contacto_destino' => 'consultas@inventario-radios.test',
     'mail_remitente'   => 'no-responder@inventario-radios.test',   // remitente de mail()
+    // Correo por Brevo (php/correo.php): tiene prioridad sobre Resend. La API key
+    // NO va acá (va en config.local.php / config.hosting.php). El remitente es una
+    // dirección verificada en Brevo (panel > Senders); puede ser un Gmail.
+    'brevo_api_key'           => '',
+    'brevo_remitente'         => '',
+    'brevo_remitente_nombre'  => 'Inventario de Radios',
     // Correo por Resend (php/correo.php). La API key NO va acá: se pone en
     // config.local.php (y en config.hosting.php para el hosting), que no se versionan.
-    // Vacía = se usa mail().
+    // Vacía (y sin Brevo) = se usa mail().
     'resend_api_key'    => '',
     // Sin dominio verificado en Resend hay que usar onboarding@resend.dev, que
     // solo puede enviar al email de la propia cuenta de Resend (contacto_destino).
@@ -39,6 +45,9 @@ date_default_timezone_set("America/Argentina/Buenos_Aires");
 define('API_DEBUG', (bool)$config['api_debug']);
 define('CONTACTO_DESTINO', $config['contacto_destino']);
 define('MAIL_REMITENTE', $config['mail_remitente']);
+define('BREVO_API_KEY', trim((string)$config['brevo_api_key']));
+define('BREVO_REMITENTE', trim((string)$config['brevo_remitente']));
+define('BREVO_REMITENTE_NOMBRE', $config['brevo_remitente_nombre']);
 define('RESEND_API_KEY', trim((string)$config['resend_api_key']));
 define('RESEND_REMITENTE', $config['resend_remitente']);
 

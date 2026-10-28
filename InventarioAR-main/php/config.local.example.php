@@ -16,6 +16,15 @@ return [
     // 'contacto_destino' => 'consultas@inventario-radios.test',
     // 'mail_remitente'   => 'no-responder@tu-dominio',
 
+    // ═══ CORREO CON BREVO (recomendado) ═════════════════════════════════
+    // Envía a cualquier destinatario sin dominio propio. Si está configurado,
+    // se usa en lugar de Resend.
+    // 👉 API key: brevo.com > SMTP & API > API Keys (empieza con "xkeysib-").
+    // 'brevo_api_key'    => 'xkeysib-xxxxxxxxxxxxxxxxxxxxxxxx',
+    // 👉 Remitente: una dirección verificada en Brevo (Senders), p. ej. tu Gmail.
+    // 'brevo_remitente'  => 'tu-correo@gmail.com',
+    // 'contacto_destino' => 'tu-correo@gmail.com',   // a dónde llegan las consultas
+
     // ═══ CORREO CON RESEND ═══════════════════════════════════════════════
     // 👉 Pegá acá tu API key (https://resend.com/api-keys, empieza con "re_").
     //    Sin key, el sistema usa mail() como antes.

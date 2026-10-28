@@ -1,6 +1,8 @@
 <?php
 // Registro de usuarios "generales" (perfil Técnico). La cuenta queda
 // pendiente: un administrador la aprueba desde la pestaña Administración.
+// No se pide legajo: se genera uno (WEB-XXXXXX) porque la tabla lo exige y
+// Administración identifica las cuentas por legajo.
 require_once __DIR__ . '/inc/inicio.php';
 require_once __DIR__ . '/../php/usuarios_validacion.php';
 
@@ -8,7 +10,7 @@ if (usuarioActual()) {
     redirigir('app.php');
 }
 
-$valores = ['legajo' => '', 'username' => '', 'nombre' => '', 'apellido' => '', 'email' => ''];
+$valores = ['nombre' => '', 'apellido' => '', 'email' => '', 'username' => ''];
 $error = null;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -23,9 +25,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($espera = esperaFormulario('registro', 60)) {
         $error = "Ya enviaste una solicitud hace instantes. Esperá $espera segundos.";
     } else {
-        [$datos, $error] = validarDatosPersonales($valores, true);
+        $legajo = 'WEB-' . strtoupper(bin2hex(random_bytes(3)));
+        [$datos, $error] = validarDatosPersonales($valores + ['legajo' => $legajo], true);
         $error ??= errorClave((string)($_POST['clave'] ?? ''), (string)($_POST['repetir'] ?? ''));
         $error ??= buscarDuplicado(bd(), $datos['legajo'], $datos['username']);
+        $error ??= emailEnUso(bd(), $datos['email']);
+        if (!$error && empty($_POST['acepto'])) {
+            $error = 'Tenés que aceptar que un administrador revise tu solicitud.';
+        }
 
         if (!$error) {
             bd()->prepare(
@@ -57,7 +64,7 @@ encabezado('Registrarse', 'registro', [
         <p><a class="btn btn-primario" href="index.php">Volver al inicio</a></p>
     <?php else: ?>
         <h1>Crear una cuenta</h1>
-        <p class="texto-suave">Las cuentas nuevas tienen perfil <strong>Técnico</strong> y un administrador debe aprobarlas.</p>
+        <p class="texto-suave">Completá tus datos. Las cuentas nuevas tienen perfil <strong>Técnico</strong>.</p>
         <?php if ($error): ?>
             <p class="mensaje-error" role="alert"><?= e($error) ?></p>
         <?php endif; ?>
@@ -70,16 +77,8 @@ encabezado('Registrarse', 'registro', [
 
             <div class="rejilla-dos">
                 <div>
-                    <label for="legajo">Legajo</label>
-                    <input type="text" id="legajo" name="legajo" value="<?= e($valores['legajo']) ?>" required maxlength="50" autocomplete="off">
-                </div>
-                <div>
-                    <label for="username">Usuario</label>
-                    <input type="text" id="username" name="username" value="<?= e($valores['username']) ?>" required maxlength="100" autocomplete="username">
-                </div>
-                <div>
                     <label for="nombre">Nombre</label>
-                    <input type="text" id="nombre" name="nombre" value="<?= e($valores['nombre']) ?>" required maxlength="100" autocomplete="given-name">
+                    <input type="text" id="nombre" name="nombre" value="<?= e($valores['nombre']) ?>" required maxlength="100" autocomplete="given-name" autofocus>
                 </div>
                 <div>
                     <label for="apellido">Apellido</label>
@@ -88,12 +87,19 @@ encabezado('Registrarse', 'registro', [
             </div>
 
             <label for="email">Email</label>
-            <input type="email" id="email" name="email" value="<?= e($valores['email']) ?>" required maxlength="150" autocomplete="email">
+            <input type="email" id="email" name="email" value="<?= e($valores['email']) ?>" required maxlength="150" autocomplete="email" aria-describedby="email-ayuda">
+            <small id="email-ayuda" class="ayuda">Lo usamos para recuperar tu contraseña. También podés ingresar con él.</small>
+
+            <label for="username">Nombre de usuario</label>
+            <input type="text" id="username" name="username" value="<?= e($valores['username']) ?>" required maxlength="100" autocomplete="username" pattern="\S+" title="Sin espacios">
 
             <div class="rejilla-dos">
                 <div>
                     <label for="clave">Contraseña</label>
-                    <input type="password" id="clave" name="clave" required minlength="<?= CLAVE_MINIMO ?>" autocomplete="new-password" aria-describedby="clave-ayuda">
+                    <div class="campo-clave">
+                        <input type="password" id="clave" name="clave" required minlength="<?= CLAVE_MINIMO ?>" autocomplete="new-password" aria-describedby="clave-ayuda">
+                        <button type="button" class="ver-clave" aria-controls="clave" aria-pressed="false" hidden>Mostrar</button>
+                    </div>
                     <small id="clave-ayuda" class="ayuda">Mínimo <?= CLAVE_MINIMO ?> caracteres.</small>
                 </div>
                 <div>
@@ -102,9 +108,14 @@ encabezado('Registrarse', 'registro', [
                 </div>
             </div>
 
-            <button type="submit" class="btn btn-primario btn-ancho">Enviar solicitud</button>
+            <label class="casilla">
+                <input type="checkbox" name="acepto" value="1" required>
+                <span>Entiendo que un administrador debe aprobar mi cuenta antes del primer ingreso.</span>
+            </label>
+
+            <button type="submit" class="btn btn-primario btn-ancho">Crear cuenta</button>
         </form>
-        <p class="texto-suave">¿Ya tenés cuenta? <a href="ingresar.php">Ingresá</a>.</p>
+        <p class="pie-formulario">¿Ya tenés cuenta? <a href="ingresar.php">Iniciá sesión</a></p>
     <?php endif; ?>
 </section>
 <?php

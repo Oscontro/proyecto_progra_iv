@@ -16,7 +16,7 @@ function urlBase(): string {
 
 /**
  * Abre la página.
- *   $activa: id del ítem del menú resaltado (inicio, contacto, registro, ingresar).
+ *   $activa: id del ítem del menú resaltado (inicio, quienes, contacto, registro, ingresar).
  *   $opciones['mapa']: permite el iframe de Google Maps (página de contacto).
  *   $opciones['descripcion']: meta description (por defecto, la del sistema).
  *   $opciones['titulo_completo']: <title> tal cual, sin agregarle el nombre del sistema.
@@ -32,7 +32,7 @@ function encabezado(string $titulo, string $activa = '', array $opciones = []): 
          . "object-src 'none'; frame-ancestors 'none'");
 
     $usuario = usuarioActual();
-    $items = [['inicio', 'index.php', 'Inicio'], ['contacto', 'contacto.php', 'Contacto']];
+    $items = [['inicio', 'index.php', 'Inicio'], ['quienes', 'quienes-somos.php', 'Quiénes somos'], ['contacto', 'contacto.php', 'Contacto']];
     if (!$usuario) {
         $items[] = ['ingresar', 'ingresar.php', 'Ingresar'];
         $items[] = ['registro', 'registro.php', 'Crear cuenta'];
@@ -134,6 +134,7 @@ function pie(): void {
                     <a href="index.php#funciones">Funciones</a>
                     <a href="index.php#taller">Circuito de taller</a>
                     <a href="index.php#preguntas">Preguntas frecuentes</a>
+                    <a href="quienes-somos.php">Quiénes somos</a>
                 </nav>
                 <nav aria-label="Cuenta">
                     <strong>Cuenta</strong>

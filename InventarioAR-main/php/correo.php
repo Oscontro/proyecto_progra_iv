@@ -1,13 +1,20 @@
 <?php
 // Envío de correos del sistema.
 //
-// Con una API key de Resend (resend_api_key en config.local.php) los correos
-// salen por la API HTTPS de Resend (https://resend.com/docs/api-reference/emails/send-email),
-// que funciona aunque el hosting no tenga mail() ni permita SMTP.
-// Sin API key se usa mail(), como pide la consigna.
+// Se usa el primer servicio configurado en config.local.php:
+//   1. Brevo (brevo_api_key + brevo_remitente): API HTTPS de Brevo
+//      (https://developers.brevo.com/reference/sendtransacemail). Alcanza con
+//      verificar una dirección de remitente (p. ej. un Gmail), sin dominio propio,
+//      y envía a cualquier destinatario.
+//   2. Resend (resend_api_key): API HTTPS de Resend
+//      (https://resend.com/docs/api-reference/emails/send-email). Sin dominio
+//      verificado solo envía al email de la propia cuenta.
+//   3. mail(), como pide la consigna.
+// Las APIs HTTPS funcionan aunque el hosting no tenga mail() ni permita SMTP.
 //
-// Requiere php/config.php (constantes RESEND_*, MAIL_REMITENTE).
+// Requiere php/config.php (constantes BREVO_*, RESEND_*, MAIL_REMITENTE).
 
+const BREVO_URL = 'https://api.brevo.com/v3/smtp/email';
 const RESEND_URL = 'https://api.resend.com/emails';
 
 /**
@@ -18,10 +25,26 @@ const RESEND_URL = 'https://api.resend.com/emails';
  * $responderA: dirección ya validada con FILTER_VALIDATE_EMAIL (o null).
  */
 function enviarCorreo(string $para, string $asunto, string $texto, ?string $responderA = null): bool {
+    if (BREVO_API_KEY !== '') {
+        return enviarConBrevo($para, $asunto, $texto, $responderA);
+    }
     if (RESEND_API_KEY !== '') {
         return enviarConResend($para, $asunto, $texto, $responderA);
     }
     return enviarConMail($para, $asunto, $texto, $responderA);
+}
+
+function enviarConBrevo(string $para, string $asunto, string $texto, ?string $responderA): bool {
+    $datos = [
+        'sender'      => ['name' => BREVO_REMITENTE_NOMBRE, 'email' => BREVO_REMITENTE],
+        'to'          => [['email' => $para]],
+        'subject'     => $asunto,
+        'textContent' => $texto,
+    ];
+    if ($responderA !== null) {
+        $datos['replyTo'] = ['email' => $responderA];
+    }
+    return postearCorreo('Brevo', BREVO_URL, ['api-key: ' . BREVO_API_KEY, 'Accept: application/json'], $datos, $para);
 }
 
 function enviarConResend(string $para, string $asunto, string $texto, ?string $responderA): bool {
@@ -29,15 +52,17 @@ function enviarConResend(string $para, string $asunto, string $texto, ?string $r
     if ($responderA !== null) {
         $datos['reply_to'] = $responderA;
     }
+    return postearCorreo('Resend', RESEND_URL, ['Authorization: Bearer ' . RESEND_API_KEY], $datos, $para);
+}
+
+/** POST JSON a la API de un servicio de correo. Devuelve si respondió 2xx. */
+function postearCorreo(string $servicio, string $url, array $cabeceras, array $datos, string $para): bool {
     $cuerpo = json_encode($datos, JSON_UNESCAPED_UNICODE);
-    $cabeceras = [
-        'Authorization: Bearer ' . RESEND_API_KEY,
-        'Content-Type: application/json',
-        'User-Agent: inventario-radios/1.0',
-    ];
+    $cabeceras[] = 'Content-Type: application/json';
+    $cabeceras[] = 'User-Agent: inventario-radios/1.0';
 
     if (function_exists('curl_init')) {
-        $c = curl_init(RESEND_URL);
+        $c = curl_init($url);
         curl_setopt_array($c, [
             CURLOPT_POST           => true,
             CURLOPT_POSTFIELDS     => $cuerpo,
@@ -58,7 +83,7 @@ function enviarConResend(string $para, string $asunto, string $texto, ?string $r
             'timeout'       => 10,
             'ignore_errors' => true,   // leer también el cuerpo de las respuestas 4xx/5xx
         ]]);
-        $respuesta = @file_get_contents(RESEND_URL, false, $contexto);
+        $respuesta = @file_get_contents($url, false, $contexto);
         $estado = preg_match('#^HTTP/\S+ (\d{3})#', $http_response_header[0] ?? '', $m) ? (int)$m[1] : 0;
         $falla = $respuesta === false ? 'sin respuesta' : '';
     }
@@ -66,8 +91,9 @@ function enviarConResend(string $para, string $asunto, string $texto, ?string $r
     if ($estado >= 200 && $estado < 300) {
         return true;
     }
-    // Resend explica el motivo en el cuerpo (p. ej. dominio no verificado o clave inválida).
-    error_log("Resend: no se pudo enviar a $para (HTTP $estado) " . ($falla ?: substr((string)$respuesta, 0, 300)));
+    // El servicio explica el motivo en el cuerpo (p. ej. remitente no verificado,
+    // clave inválida o, en Brevo, IP no autorizada).
+    error_log("$servicio: no se pudo enviar a $para (HTTP $estado) " . ($falla ?: substr((string)$respuesta, 0, 300)));
     return false;
 }
 

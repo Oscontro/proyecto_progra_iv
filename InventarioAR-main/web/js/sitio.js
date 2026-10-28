@@ -20,6 +20,20 @@ if (botonTema) {
     });
 }
 
+// Mostrar/ocultar la contraseña en los formularios de ingreso y registro.
+for (const boton of document.querySelectorAll('.ver-clave')) {
+    const campo = document.getElementById(boton.getAttribute('aria-controls'));
+    if (!campo) continue;
+    boton.hidden = false;
+    boton.addEventListener('click', () => {
+        const ver = campo.type === 'password';
+        campo.type = ver ? 'text' : 'password';
+        boton.textContent = ver ? 'Ocultar' : 'Mostrar';
+        boton.setAttribute('aria-pressed', String(ver));
+        campo.focus();
+    });
+}
+
 // Aparición al desplazarse. Solo se ocultan los bloques que todavía están debajo
 // de la pantalla, así lo visible al cargar nunca parpadea. Sin JavaScript, o con
 // "reducir movimiento", todo se ve desde el principio.

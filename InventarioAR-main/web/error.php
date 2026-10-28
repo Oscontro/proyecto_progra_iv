@@ -6,12 +6,13 @@ require_once __DIR__ . '/inc/inicio.php';
 // código => [estado HTTP, título, mensaje, [texto del enlace, destino]]
 const ERRORES = [
     'credenciales'   => [401, 'Usuario o contraseña incorrectos',
-                         'Verificá los datos e intentá de nuevo. Después de 5 intentos fallidos la cuenta se bloquea 15 minutos.',
+                         'Verificá los datos e intentá de nuevo. Después de 5 intentos fallidos la cuenta se bloquea 15 minutos. '
+                         . 'Si no la recordás, podés restablecerla desde «¿Olvidaste tu contraseña?».',
                          ['Volver a intentar', 'ingresar.php']],
-    'datos'          => [400, 'Faltan datos', 'Completá el usuario y la contraseña.', ['Volver a intentar', 'ingresar.php']],
+    'datos'          => [400, 'Faltan datos', 'Completá el usuario o email y la contraseña.', ['Volver a intentar', 'ingresar.php']],
     'bloqueada'      => [429, 'Cuenta bloqueada temporalmente',
-                         'Hubo demasiados intentos fallidos. Esperá 15 minutos o pedí a un administrador que resetee tu contraseña.',
-                         ['Volver al inicio', 'index.php']],
+                         'Hubo demasiados intentos fallidos. Esperá 15 minutos o restablecé tu contraseña por correo.',
+                         ['Recuperar contraseña', 'olvide-clave.php']],
     'pendiente'      => [403, 'Tu cuenta todavía no fue aprobada',
                          'Un administrador tiene que aprobar tu registro antes de que puedas ingresar.',
                          ['Volver al inicio', 'index.php']],

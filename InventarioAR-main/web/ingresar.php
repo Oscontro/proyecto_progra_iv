@@ -1,6 +1,6 @@
 <?php
-// Ingreso al sistema (login). Verifica usuario y contraseña, abre la sesión
-// de PHP y lleva a la aplicación; si algo falla redirige a error.php con el motivo.
+// Ingreso al sistema (login) con usuario o email. Verifica la contraseña, abre la
+// sesión de PHP y lleva a la aplicación; si algo falla redirige a error.php con el motivo.
 require_once __DIR__ . '/inc/inicio.php';
 
 if (usuarioActual()) {
@@ -26,25 +26,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $aviso = flash('aviso');
-encabezado('Ingresar', 'ingresar');
+encabezado('Iniciar sesión', 'ingresar');
 ?>
-<section class="caja-formulario">
-    <h1>Ingresar al sistema</h1>
+<section class="caja-formulario caja-angosta">
+    <h1>Iniciar sesión</h1>
+    <p class="texto-suave">Ingresá con tu usuario o tu email.</p>
     <?php if ($aviso): ?>
         <p class="mensaje-info" role="status"><?= e($aviso) ?></p>
     <?php endif; ?>
     <form method="post" action="ingresar.php" class="formulario-sitio">
         <input type="hidden" name="csrf" value="<?= e(tokenCsrf()) ?>">
 
-        <label for="usuario">Usuario</label>
-        <input type="text" id="usuario" name="usuario" autocomplete="username" required autofocus maxlength="100">
+        <label for="usuario">Usuario o email</label>
+        <input type="text" id="usuario" name="usuario" autocomplete="username" required autofocus maxlength="150">
 
-        <label for="clave">Contraseña</label>
-        <input type="password" id="clave" name="clave" autocomplete="current-password" required>
+        <div class="etiqueta-con-enlace">
+            <label for="clave">Contraseña</label>
+            <a href="olvide-clave.php">¿Olvidaste tu contraseña?</a>
+        </div>
+        <div class="campo-clave">
+            <input type="password" id="clave" name="clave" autocomplete="current-password" required>
+            <!-- Mostrar/ocultar la contraseña (js/sitio.js); sin JavaScript queda oculto -->
+            <button type="button" class="ver-clave" aria-controls="clave" aria-pressed="false" hidden>Mostrar</button>
+        </div>
 
         <button type="submit" class="btn btn-primario btn-ancho">Ingresar</button>
     </form>
-    <p class="texto-suave">¿No tenés cuenta? <a href="registro.php">Registrate</a>.</p>
+    <p class="pie-formulario">¿No tenés cuenta? <a href="registro.php">Creá una</a></p>
 </section>
 <?php
 pie();

@@ -353,6 +353,23 @@ CREATE TABLE `programacion_canales` (
   CONSTRAINT `programacion_canales_ibfk_2` FOREIGN KEY (`usuario_programacion`) REFERENCES `usuarios` (`id_usuario`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Programación de frecuencias por equipo';
 /*!40101 SET character_set_client = @saved_cs_client */;
+DROP TABLE IF EXISTS `recuperaciones_clave`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `recuperaciones_clave` (
+  `id_recuperacion` int(11) NOT NULL AUTO_INCREMENT,
+  `id_usuario` int(11) NOT NULL,
+  `token_hash` char(64) NOT NULL COMMENT 'SHA-256 del token enviado por correo',
+  `vence` datetime NOT NULL,
+  `usado` tinyint(1) NOT NULL DEFAULT 0,
+  `ip` varchar(45) DEFAULT NULL,
+  `fecha` datetime NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id_recuperacion`),
+  UNIQUE KEY `token_hash` (`token_hash`),
+  KEY `idx_usuario` (`id_usuario`),
+  CONSTRAINT `recuperaciones_clave_ibfk_usuario` FOREIGN KEY (`id_usuario`) REFERENCES `usuarios` (`id_usuario`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Enlaces de recuperación de contraseña';
+/*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `repuesto_stock`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;

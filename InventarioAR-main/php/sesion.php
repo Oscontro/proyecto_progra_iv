@@ -142,9 +142,12 @@ function actualizarHuellaSesion(string $nuevoHash): void {
  * así no se revela qué cuentas existen.
  */
 function autenticar(PDO $pdo, string $username, string $clave): array {
-    $stmt = $pdo->prepare("SELECT * FROM usuarios WHERE username = ?");
+    // Con "@" se busca por email; si dos cuentas viejas comparten el email, no se adivina cuál es.
+    $campo = str_contains($username, '@') ? 'email' : 'username';
+    $stmt = $pdo->prepare("SELECT * FROM usuarios WHERE $campo = ? LIMIT 2");
     $stmt->execute([$username]);
-    $usuario = $stmt->fetch(PDO::FETCH_ASSOC);
+    $filas = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $usuario = count($filas) === 1 ? $filas[0] : null;
 
     if (!$usuario) {
         password_verify($clave, '$2y$10$KP4U.voJdQ9zgkk4Dp5fPu3AU2Nif7KVjr3QE6Tbl8N9fWWZBmFEG'); // mismo tiempo de respuesta

@@ -1,7 +1,7 @@
 <?php
 // Contacto: mapa de Google y formulario de consulta. La consulta se guarda
 // en la tabla contactos y se envía por correo a CONTACTO_DESTINO (php/config.php):
-// con Resend si hay API key, si no con mail() (ver php/correo.php).
+// con Brevo o Resend si hay API key, si no con mail() (ver php/correo.php).
 require_once __DIR__ . '/inc/inicio.php';
 require_once __DIR__ . '/../php/correo.php';
 
@@ -30,7 +30,7 @@ function errorConsulta(array $c): ?string {
     return null;
 }
 
-/** Envía la consulta por correo (Resend o mail(), ver php/correo.php). */
+/** Envía la consulta por correo (Brevo, Resend o mail(), ver php/correo.php). */
 function enviarConsulta(array $c, int $id): bool {
     $cuerpo = "Nueva consulta desde el formulario de contacto
 

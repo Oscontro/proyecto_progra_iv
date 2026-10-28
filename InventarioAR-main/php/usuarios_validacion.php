@@ -32,8 +32,11 @@ function validarDatosPersonales(array $datos, bool $emailObligatorio = false): a
         }
         $resultado[$clave] = $valor;
     }
-    if (preg_match('/\s/u', $resultado['legajo']) || preg_match('/\s/u', $resultado['username'])) {
-        return [null, "El legajo y el usuario no pueden tener espacios"];
+    if (preg_match('/\s/u', $resultado['legajo'])) {
+        return [null, "El legajo no puede tener espacios"];
+    }
+    if (preg_match('/\s/u', $resultado['username'])) {
+        return [null, "El nombre de usuario no puede tener espacios"];
     }
     if ($resultado['email'] !== null && !filter_var($resultado['email'], FILTER_VALIDATE_EMAIL)) {
         return [null, "El email no es válido"];
@@ -63,4 +66,11 @@ function buscarDuplicado(PDO $pdo, string $legajo, string $username, ?int $exclu
     return strcasecmp($otro, $legajo) === 0
         ? "El legajo '$legajo' ya se encuentra registrado"
         : "El nombre de usuario '$username' ya está en uso";
+}
+
+/** Mensaje si el email ya lo usa otra cuenta, o null. El login y la recuperación de clave aceptan el email. */
+function emailEnUso(PDO $pdo, string $email, ?int $excluirId = null): ?string {
+    $stmt = $pdo->prepare("SELECT 1 FROM usuarios WHERE email = ? AND id_usuario <> ? LIMIT 1");
+    $stmt->execute([$email, $excluirId ?? 0]);
+    return $stmt->fetchColumn() === false ? null : "El email '$email' ya está registrado en otra cuenta";
 }
