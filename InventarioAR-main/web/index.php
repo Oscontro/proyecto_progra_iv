@@ -195,7 +195,7 @@ $captura = fn(string $nombre, string $alt) =>
                 </div>
                 <div class="bento-texto">
                     <h3>Taller</h3>
-                    <p>Circuito completo de reparación: envío, recepción, cambios de estado y egreso registrando los repuestos utilizados.</p>
+                    <p>Circuito completo de reparación: envío, recepción, ingreso y egreso registrando los repuestos utilizados.</p>
                 </div>
             </li>
             <li class="bento-tarjeta revelar">
@@ -275,7 +275,7 @@ $captura = fn(string $nombre, string $alt) =>
             <ol class="flujo">
                 <li><span class="nodo"><?= $icono('<path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4z"/>') ?></span><h3>Envío</h3><p>Desde el inventario se envía el equipo al taller indicando la falla.</p></li>
                 <li><span class="nodo"><?= $icono('<path d="M21 8 12 3 3 8v8l9 5 9-5z"/><path d="m8 12 3 3 5-6"/>') ?></span><h3>Recepción</h3><p>El taller confirma que recibió el equipo y queda a su cargo.</p></li>
-                <li><span class="nodo"><?= $icono($iTaller) ?></span><h3>Reparación</h3><p>Los cambios de estado quedan en el historial del equipo.</p></li>
+                <li><span class="nodo"><?= $icono($iTaller) ?></span><h3>Reparación</h3><p>Se registra el ingreso con los elementos recibidos y cada paso queda en el historial del equipo.</p></li>
                 <li><span class="nodo"><?= $icono('<path d="M20 6 9 17l-5-5"/>') ?></span><h3>Egreso</h3><p>Se registra la salida con los repuestos utilizados y el equipo vuelve al servicio.</p></li>
             </ol>
         </div>

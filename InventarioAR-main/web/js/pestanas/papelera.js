@@ -2,7 +2,8 @@
 //
 // Lista equipos y vehículos dados de baja, con búsqueda y filtros, y permite
 // ver el historial, restaurar y (solo administradores) eliminar
-// definitivamente, con confirmación escribiendo ELIMINAR.
+// definitivamente, con confirmación escribiendo ELIMINAR. Restaurar y
+// eliminar funcionan con varias filas elegidas a la vez.
 // Los vehículos siguen apareciendo aunque su pestaña se retiró de la migración:
 // pueden restaurarse o eliminarse desde acá, como en el escritorio.
 
@@ -10,6 +11,7 @@ import { ApiError, SesionExpirada, ClavePendiente } from '../api.js';
 import { el, aviso, confirmar, campoSelect, llenarSelect, dialogo } from '../ui.js';
 import { tablaSeleccionable } from '../tabla_seleccionable.js';
 import { verHistorialEquipo, verHistorialVehiculo } from '../historial.js';
+import { enLote, listaLote, rotular } from '../lote.js';
 
 const COLUMNAS = [
     { clave: 'tipo', titulo: 'Tipo' },
@@ -23,6 +25,13 @@ const COLUMNAS = [
 
 const TODOS = '';
 const PALABRA_CONFIRMACION = 'ELIMINAR';
+const TEXTO_RESTAURAR = '♻️ Restaurar';
+const TEXTO_ELIMINAR = '🔥 Eliminar de la base de datos';
+
+const esEquipo = (item) => item.origen === 'equipo';
+const descripcion = (item) => (esEquipo(item)
+    ? `Equipo N° de serie ${item.numero_serie} · Modelo ${item.modelo_equipo || '-'}`
+    : `Vehículo ${item.numero_serie} · Escala ${item.escala || '-'}`);
 
 export function montar(contenedor, { api, usuario }) {
     let completos = [];
@@ -34,20 +43,25 @@ export function montar(contenedor, { api, usuario }) {
     const fEscala = campoSelect('Escala', [], { id: 'pap-escala', alCambiar: aplicarFiltros });
 
     const btnHistorial = el('button', { type: 'button', class: 'btn btn-primario', disabled: true, onclick: () => verHistorial() }, '📜 Ver historial');
-    const btnRestaurar = el('button', { type: 'button', class: 'btn btn-exito', disabled: true, onclick: restaurar }, '♻️ Restaurar');
+    const btnRestaurar = el('button', { type: 'button', class: 'btn btn-exito', disabled: true, onclick: restaurar }, TEXTO_RESTAURAR);
     const btnEliminar = usuario.es_admin
-        ? el('button', { type: 'button', class: 'btn btn-peligro', disabled: true, onclick: eliminarDefinitivo }, '🔥 Eliminar de la base de datos')
+        ? el('button', { type: 'button', class: 'btn btn-peligro', disabled: true, onclick: eliminarDefinitivo }, TEXTO_ELIMINAR)
         : null;
 
     const tabla = tablaSeleccionable({
         columnas: COLUMNAS,
         etiqueta: 'Equipos y vehículos en la papelera',
         unidad: 'ítems',
+        multiple: true,
         // El escritorio muestra "-" en los campos vacíos (los vehículos no tienen marca ni modelo).
         formato: (valor) => (valor === null || valor === undefined || valor === '' ? '-' : String(valor)),
-        alSeleccionar: (fila) => {
-            for (const boton of [btnHistorial, btnRestaurar, btnEliminar]) {
-                if (boton) boton.disabled = !fila;
+        alSeleccionar: (fila, seleccionadas) => {
+            btnHistorial.disabled = !fila;
+            btnRestaurar.disabled = !seleccionadas.length;
+            rotular(btnRestaurar, TEXTO_RESTAURAR, seleccionadas.length);
+            if (btnEliminar) {
+                btnEliminar.disabled = !seleccionadas.length;
+                rotular(btnEliminar, TEXTO_ELIMINAR, seleccionadas.length);
             }
         },
         alActivar: verHistorial,
@@ -130,41 +144,46 @@ export function montar(contenedor, { api, usuario }) {
     }
 
     async function restaurar() {
-        const item = tabla.seleccionada;
-        if (!item) return;
-        const esEquipo = item.origen === 'equipo';
-        const ok = await confirmar('Confirmar restauración', esEquipo
-            ? `¿Restaurar el equipo N° de serie ${item.numero_serie} (${item.modelo_equipo || 'sin modelo'})? Volverá a estar disponible en el inventario.`
-            : `¿Restaurar el vehículo ${item.numero_serie} (escala ${item.escala || '-'})? Volverá a estar disponible.`,
+        const items = tabla.seleccionadas;
+        if (!items.length) return;
+        const [item] = items;
+        const ok = await confirmar('Confirmar restauración', items.length > 1
+            ? `¿Restaurar los ${items.length} ítems seleccionados? Volverán a estar disponibles en el inventario.`
+            : esEquipo(item)
+                ? `¿Restaurar el equipo N° de serie ${item.numero_serie} (${item.modelo_equipo || 'sin modelo'})? Volverá a estar disponible en el inventario.`
+                : `¿Restaurar el vehículo ${item.numero_serie} (escala ${item.escala || '-'})? Volverá a estar disponible.`,
             { aceptar: 'Restaurar' });
         if (!ok) return;
 
+        let resultado;
         try {
-            if (esEquipo) {
-                await api.post('restaurar_equipo.php', { id_equipo: item.id_referencia });
-            } else {
-                await api.post('restaurar_vehiculo.php', { id_vehiculo: item.id_referencia });
-            }
-            quitar(item);
-            aviso(`${esEquipo ? 'El equipo' : 'El vehículo'} ${item.numero_serie} fue restaurado correctamente.`, 'exito');
+            resultado = await enLote(items, (x) => (esEquipo(x)
+                ? api.post('restaurar_equipo.php', { id_equipo: x.id_referencia })
+                : api.post('restaurar_vehiculo.php', { id_vehiculo: x.id_referencia })));
         } catch (error) {
             manejarError(error, 'No se pudo restaurar');
+            cargar();
+            return;
         }
+        informar(resultado, items.length === 1
+            ? `${esEquipo(item) ? 'El equipo' : 'El vehículo'} ${item.numero_serie} fue restaurado correctamente.`
+            : `Se restauraron ${resultado.hechos.length} ítems.`, 'No se pudo restaurar');
     }
 
     function eliminarDefinitivo() {
-        const item = tabla.seleccionada;
-        if (!item || !usuario.es_admin) return;
-        const esEquipo = item.origen === 'equipo';
+        const items = tabla.seleccionadas;
+        if (!items.length || !usuario.es_admin) return;
+        const [item] = items;
 
         // Confirmación reforzada: hay que escribir la palabra exacta (como en el escritorio).
         const campo = el('input', { type: 'text', id: 'pap-confirmar', autocomplete: 'off', spellcheck: 'false' });
-        const boton = el('button', { type: 'button', class: 'btn btn-peligro', disabled: true }, 'Eliminar definitivamente');
+        const boton = el('button', { type: 'button', class: 'btn btn-peligro', disabled: true },
+            items.length > 1 ? `Eliminar ${items.length} definitivamente` : 'Eliminar definitivamente');
         const modal = dialogo('Eliminar definitivamente', [
-            el('p', { class: 'mensaje-error' }, 'Esta acción es IRREVERSIBLE. Se borran también su historial y sus datos asociados.'),
-            el('p', {}, esEquipo
-                ? `Equipo N° de serie ${item.numero_serie} · Modelo ${item.modelo_equipo || '-'}`
-                : `Vehículo ${item.numero_serie} · Escala ${item.escala || '-'}`),
+            el('p', { class: 'mensaje-error' }, items.length > 1
+                ? `Esta acción es IRREVERSIBLE. Se borran los ${items.length} ítems seleccionados, con su historial y sus datos asociados.`
+                : 'Esta acción es IRREVERSIBLE. Se borran también su historial y sus datos asociados.'),
+            items.length > 1 ? listaLote(items.map(descripcion)) : el('p', {}, descripcion(item)),
             el('label', { for: campo.id }, `Escribí ${PALABRA_CONFIRMACION} para confirmar`),
             campo,
         ], { acciones: [boton] });
@@ -176,22 +195,36 @@ export function montar(contenedor, { api, usuario }) {
 
         boton.addEventListener('click', async () => {
             boton.disabled = true;
+            let resultado;
             try {
-                await api.post('eliminar_definitivo.php', {
-                    origen: item.origen, id_referencia: item.id_referencia, numero_serie: item.numero_serie,
-                });
-                modal.querySelector('.modal-cerrar').click();
-                quitar(item);
-                aviso(`${esEquipo ? 'El equipo' : 'El vehículo'} ${item.numero_serie} fue eliminado permanentemente.`, 'exito');
+                resultado = await enLote(items, (x) => api.post('eliminar_definitivo.php', {
+                    origen: x.origen, id_referencia: x.id_referencia, numero_serie: x.numero_serie,
+                }));
             } catch (error) {
                 boton.disabled = campo.value !== PALABRA_CONFIRMACION;
                 manejarError(error, 'No se pudo eliminar');
+                return;
             }
+            modal.querySelector('.modal-cerrar').click();
+            informar(resultado, items.length === 1
+                ? `${esEquipo(item) ? 'El equipo' : 'El vehículo'} ${item.numero_serie} fue eliminado permanentemente.`
+                : `Se eliminaron permanentemente ${resultado.hechos.length} ítems.`, 'No se pudo eliminar');
         });
     }
 
-    function quitar(item) {
-        completos = completos.filter((x) => x !== item);
+    // Saca de la tabla lo que salió bien y avisa qué falló (con el motivo del servidor).
+    function informar({ hechos, fallidos }, textoExito, contextoError) {
+        quitar(...hechos);
+        if (hechos.length) aviso(textoExito, 'exito');
+        if (fallidos.length === 1) {
+            aviso(`${contextoError} ${fallidos[0].item.numero_serie}: ${fallidos[0].mensaje}`, 'error');
+        } else if (fallidos.length) {
+            aviso(`${contextoError} ${fallidos.length} ítems: ${fallidos.map((f) => `${f.item.numero_serie} (${f.mensaje})`).join('; ')}`, 'error');
+        }
+    }
+
+    function quitar(...items) {
+        completos = completos.filter((x) => !items.includes(x));
         aplicarFiltros();
     }
 

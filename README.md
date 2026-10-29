@@ -41,7 +41,7 @@ Proyecto Integrador (2º parcial) · Programación IV · HTML5, CSS, JavaScript,
 |---|:---:|:---:|
 | Ingreso de equipos: alta con programación de canales, importación desde Excel | ✅ | ✅ |
 | Inventario: buscador, filtros, historial, exportación a Excel, edición, envío a papelera y a taller | ✅ | ✅ |
-| Taller: recepción, estados y egreso registrando los repuestos usados | ✅ | ✅ |
+| Taller: recepción, ingreso y egreso registrando los repuestos usados | ✅ | ✅ |
 | Repuestos: catálogo y stock por taller | ✅ | ✅ (las bajas, solo admin) |
 | Papelera: restaurar equipos | ✅ | ✅ (la baja definitiva, solo admin) |
 | Estadísticas | ✅ | ✅ |

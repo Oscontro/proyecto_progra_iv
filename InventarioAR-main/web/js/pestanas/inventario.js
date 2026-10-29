@@ -4,6 +4,8 @@
 // cascada, escala, sector, estado), tabla ordenable, historial del equipo,
 // copiar fila, exportación a Excel de lo filtrado, edición del equipo (con
 // su programación de canales), envío a papelera y envío a reparación (taller).
+// Copiar, enviar a papelera y enviar a reparación funcionan con varias filas
+// elegidas a la vez; editar y ver historial, con una sola.
 
 import { ApiError, SesionExpirada, ClavePendiente } from '../api.js';
 import { el, aviso, textoCelda, campoSelect, llenarSelect, dialogoFormulario, campoSugerencias } from '../ui.js';
@@ -11,6 +13,7 @@ import { exportarExcel, fechaArchivo } from '../excel.js';
 import { tablaSeleccionable } from '../tabla_seleccionable.js';
 import { verHistorialEquipo } from '../historial.js';
 import { editarProgramacion, resumenProgramacion } from '../programacion.js';
+import { enLote, listaLote, rotular } from '../lote.js';
 
 // Columnas visibles (el escritorio oculta potencia y nombre de plantilla).
 const COLUMNAS = [
@@ -25,6 +28,9 @@ const COLUMNAS = [
 ];
 
 const TODOS = '';
+const TEXTO_COPIAR = '📋 Copiar fila';
+const TEXTO_PAPELERA = '🗑️ Enviar a papelera';
+const TEXTO_REPARACION = '🔧 Enviar a reparación';
 
 export function montar(contenedor, { api }) {
     let completos = [];
@@ -47,19 +53,22 @@ export function montar(contenedor, { api }) {
 
     // ── Tabla y acciones ──
     const btnHistorial = el('button', { type: 'button', class: 'btn btn-primario', disabled: true, onclick: () => verHistorial() }, '📜 Ver historial');
-    const btnCopiar = el('button', { type: 'button', class: 'btn btn-secundario', disabled: true, onclick: copiarFila }, '📋 Copiar fila');
+    const btnCopiar = el('button', { type: 'button', class: 'btn btn-secundario', disabled: true, onclick: copiarFila }, TEXTO_COPIAR);
     const btnExcel = el('button', { type: 'button', class: 'btn btn-exito', onclick: generarExcel }, '📊 Generar Excel');
     const btnEditar = el('button', { type: 'button', class: 'btn btn-primario', disabled: true, onclick: editar }, '📝 Editar');
-    const btnPapelera = el('button', { type: 'button', class: 'btn btn-peligro boton-derecha', disabled: true, onclick: enviarAPapelera }, '🗑️ Enviar a papelera');
-    const btnReparacion = el('button', { type: 'button', class: 'btn btn-advertencia', disabled: true, onclick: enviarAReparacion }, '🔧 Enviar a reparación');
+    const btnPapelera = el('button', { type: 'button', class: 'btn btn-peligro boton-derecha', disabled: true, onclick: enviarAPapelera }, TEXTO_PAPELERA);
+    const btnReparacion = el('button', { type: 'button', class: 'btn btn-advertencia', disabled: true, onclick: enviarAReparacion }, TEXTO_REPARACION);
 
     const tabla = tablaSeleccionable({
         columnas: COLUMNAS,
         etiqueta: 'Equipos del inventario',
         unidad: 'equipos',
-        alSeleccionar: (fila) => {
-            for (const boton of [btnEditar, btnHistorial, btnCopiar, btnPapelera, btnReparacion]) {
-                boton.disabled = !fila;
+        multiple: true,
+        alSeleccionar: (fila, seleccionadas) => {
+            btnEditar.disabled = btnHistorial.disabled = !fila;
+            for (const [boton, texto] of [[btnCopiar, TEXTO_COPIAR], [btnPapelera, TEXTO_PAPELERA], [btnReparacion, TEXTO_REPARACION]]) {
+                boton.disabled = !seleccionadas.length;
+                rotular(boton, texto, seleccionadas.length);
             }
         },
         alActivar: verHistorial,
@@ -195,12 +204,13 @@ export function montar(contenedor, { api }) {
     }
 
     async function copiarFila() {
-        const equipo = tabla.seleccionada;
-        if (!equipo) return;
-        const texto = COLUMNAS.map((c) => textoCelda(equipo[c.clave])).join('\t');
+        const equipos = tabla.seleccionadas;
+        if (!equipos.length) return;
+        // Una línea por equipo, columnas separadas por tabulación (se pega bien en Excel).
+        const texto = equipos.map((equipo) => COLUMNAS.map((c) => textoCelda(equipo[c.clave])).join('\t')).join('\n');
         try {
             await navigator.clipboard.writeText(texto);
-            aviso('Fila copiada al portapapeles.', 'exito');
+            aviso(equipos.length > 1 ? `${equipos.length} filas copiadas al portapapeles.` : 'Fila copiada al portapapeles.', 'exito');
         } catch {
             aviso('No se pudo copiar al portapapeles.', 'error');
         }
@@ -397,28 +407,24 @@ export function montar(contenedor, { api }) {
 
     // ── Enviar a papelera ──
     function enviarAPapelera() {
-        const equipo = tabla.seleccionada;
-        if (!equipo) return;
+        const equipos = tabla.seleccionadas;
+        if (!equipos.length) return;
+        const varios = equipos.length > 1;
         const motivo = el('textarea', { id: 'pap-motivo', maxlength: 500, placeholder: 'Motivo de la baja…' });
         const { form } = dialogoFormulario('Enviar a papelera', [
-            fichaEquipo(equipo),
-            el('p', {}, '¿Enviar este equipo a la papelera? Se podrá restaurar desde la pestaña Papelera.'),
-            el('label', { for: motivo.id }, 'Motivo'),
+            fichaEquipos(equipos),
+            el('p', {}, varios
+                ? `¿Enviar estos ${equipos.length} equipos a la papelera? Se podrán restaurar desde la pestaña Papelera.`
+                : '¿Enviar este equipo a la papelera? Se podrá restaurar desde la pestaña Papelera.'),
+            el('label', { for: motivo.id }, varios ? 'Motivo (el mismo para todos)' : 'Motivo'),
             motivo,
         ], {
-            textoAceptar: '🗑️ Enviar a papelera',
+            textoAceptar: varios ? `🗑️ Enviar ${equipos.length} a papelera` : TEXTO_PAPELERA,
             ancho: 'medio',
-            alAceptar: async () => {
-                try {
-                    await api.post('enviar_papelera.php', { id_equipo: equipo.id_equipo, motivo: motivo.value.trim() });
-                } catch (error) {
-                    manejarError(error, 'No se pudo enviar a la papelera');
-                    return false;
-                }
-                aviso(`Equipo ${equipo.numero_serie} enviado a la papelera.`, 'exito');
-                cargar();
-                return true;
-            },
+            alAceptar: () => procesarLote(equipos,
+                (equipo) => api.post('enviar_papelera.php', { id_equipo: equipo.id_equipo, motivo: motivo.value.trim() }),
+                (n) => (varios ? `${n} equipos enviados a la papelera.` : `Equipo ${equipos[0].numero_serie} enviado a la papelera.`),
+                'No se pudo enviar a la papelera'),
         });
         form.querySelector('[type="submit"]').className = 'btn btn-peligro';
         motivo.focus();
@@ -426,8 +432,9 @@ export function montar(contenedor, { api }) {
 
     // ── Enviar a reparación (taller) ──
     async function enviarAReparacion() {
-        const equipo = tabla.seleccionada;
-        if (!equipo) return;
+        const equipos = tabla.seleccionadas;
+        if (!equipos.length) return;
+        const varios = equipos.length > 1;
         let talleres;
         try {
             talleres = await api.get('talleres.php');
@@ -443,33 +450,63 @@ export function montar(contenedor, { api }) {
         llenarSelect(selTaller, talleres.map((t) => ({ valor: t.id_taller, texto: t.taller })));
         const motivo = el('textarea', { id: 'rep-motivo', maxlength: 500, placeholder: 'Falla o motivo del envío…' });
         dialogoFormulario('Enviar a reparación', [
-            fichaEquipo(equipo),
+            fichaEquipos(equipos),
             el('label', { for: selTaller.id }, 'Taller'),
             selTaller,
-            el('label', { for: motivo.id }, 'Observaciones'),
+            el('label', { for: motivo.id }, varios ? 'Observaciones (las mismas para todos)' : 'Observaciones'),
             motivo,
-            el('p', { class: 'texto-suave' }, 'El equipo sale del inventario y aparece en Taller como "No ingresado" hasta que el taller lo reciba.'),
+            el('p', { class: 'texto-suave' }, varios
+                ? 'Los equipos salen del inventario y aparecen en Taller como "No ingresado" hasta que el taller los reciba.'
+                : 'El equipo sale del inventario y aparece en Taller como "No ingresado" hasta que el taller lo reciba.'),
         ], {
-            textoAceptar: '🔧 Enviar a taller',
+            textoAceptar: varios ? `🔧 Enviar ${equipos.length} a taller` : '🔧 Enviar a taller',
             ancho: 'medio',
-            alAceptar: async () => {
-                try {
-                    await api.post('enviar_a_taller.php', {
+            alAceptar: () => {
+                const taller = selTaller.selectedOptions[0]?.textContent ?? '';
+                return procesarLote(equipos,
+                    (equipo) => api.post('enviar_a_taller.php', {
                         id_equipo: equipo.id_equipo,
                         id_taller: Number(selTaller.value),
                         observaciones: motivo.value.trim(),
-                    });
-                } catch (error) {
-                    manejarError(error, 'No se pudo enviar a taller');
-                    return false;
-                }
-                const taller = selTaller.selectedOptions[0]?.textContent ?? '';
-                aviso(`Equipo ${equipo.numero_serie} enviado a ${taller}.`, 'exito');
-                cargar();
-                return true;
+                    }),
+                    (n) => (varios ? `${n} equipos enviados a ${taller}.` : `Equipo ${equipos[0].numero_serie} enviado a ${taller}.`),
+                    'No se pudo enviar a taller');
             },
         });
         motivo.focus();
+    }
+
+    // Manda cada equipo al endpoint y avisa el resultado. Si alguno falló, el
+    // diálogo se cierra igual (los que salieron bien ya no se pueden repetir)
+    // y el aviso dice cuáles fallaron y por qué.
+    async function procesarLote(equipos, accion, textoExito, contextoError) {
+        let resultado;
+        try {
+            resultado = await enLote(equipos, accion);
+        } catch (error) {
+            manejarError(error, contextoError);
+            cargar();
+            return false;
+        }
+        const { hechos, fallidos } = resultado;
+        if (!hechos.length) {
+            // No salió ninguno: el diálogo queda abierto para corregir y reintentar.
+            aviso(`${contextoError}: ${fallidos.map((f) => (equipos.length > 1 ? `${f.item.numero_serie} (${f.mensaje})` : f.mensaje)).join('; ')}`, 'error');
+            return false;
+        }
+        aviso(textoExito(hechos.length), 'exito');
+        if (fallidos.length) {
+            aviso(`${contextoError} ${fallidos.length === 1 ? 'el equipo' : `${fallidos.length} equipos`}: ${fallidos.map((f) => `${f.item.numero_serie} (${f.mensaje})`).join('; ')}`, 'error');
+        }
+        cargar();
+        return true;
+    }
+
+    // Un equipo: su ficha completa. Varios: la lista de números de serie.
+    function fichaEquipos(equipos) {
+        return equipos.length === 1
+            ? fichaEquipo(equipos[0])
+            : listaLote(equipos.map((e) => `${textoCelda(e.numero_serie)} · ${textoCelda(e.marca)} ${textoCelda(e.modelo_equipo)} · ${textoCelda(e.estado)}`));
     }
 
     function fichaEquipo(equipo) {

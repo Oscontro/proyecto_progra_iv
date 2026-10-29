@@ -1,9 +1,8 @@
 // Pestaña Taller (equivalente a tabs/tab_taller.py).
 //
 // Circuito: Inventario envía el equipo a reparación ("No ingresado") ->
-// acá se registra el INGRESO (elementos recibidos, N° de SD) -> se ACTUALIZA
-// el estado mientras se repara -> EGRESO (tareas, repuestos, guía), que lo
-// deja "Reparado" y fuera del taller.
+// acá se registra el INGRESO (elementos recibidos, N° de SD) -> EGRESO
+// (tareas, repuestos, guía), que lo deja "Reparado" y fuera del taller.
 //
 // Diferencias deliberadas con el escritorio:
 //  - El egreso funciona: en el escritorio el diálogo dependía de un servicio
@@ -12,7 +11,7 @@
 //    equipo, con cantidad; salen del stock del taller y pasan a "en uso"
 //    (migración 2026-10-14). "Otros" queda como texto y no toca stock.
 //  - Los botones se habilitan según el estado: Ingreso solo para
-//    "No ingresado"; Actualizar estado y Egreso solo para equipos ingresados.
+//    "No ingresado"; Egreso solo para equipos ingresados.
 //  - El texto automático para correo se genera a partir del egreso, se puede
 //    editar antes de guardar y queda en el historial del equipo.
 
@@ -64,7 +63,6 @@ const TAREAS_EGRESO = [
 
 export function montar(contenedor, { api }) {
     let completos = [];
-    let estadosTaller = [];   // [{id_estado, estado}] para "Actualizar estado"
 
     const buscar = el('input', { type: 'search', id: 'tal-buscar', placeholder: 'N° de serie…', autocomplete: 'off' });
     const estado = el('p', { class: 'estado-carga', role: 'status' });
@@ -73,7 +71,6 @@ export function montar(contenedor, { api }) {
 
     const btnIngreso = el('button', { type: 'button', class: 'btn btn-primario', disabled: true, onclick: ingresar }, '🔧 Ingreso a taller');
     const btnHistorial = el('button', { type: 'button', class: 'btn btn-secundario', disabled: true, onclick: () => verHistorial() }, '📜 Ver historial');
-    const btnEstado = el('button', { type: 'button', class: 'btn btn-secundario', disabled: true, onclick: actualizarEstado }, 'Actualizar estado');
     const btnEgreso = el('button', { type: 'button', class: 'btn btn-exito', disabled: true, onclick: egresar }, '✅ Egreso del taller');
 
     const tabla = tablaSeleccionable({
@@ -86,7 +83,6 @@ export function montar(contenedor, { api }) {
             habilitar(btnIngreso, fila && fila.estado_taller === NO_INGRESADO,
                 fila ? `Solo para equipos en estado "${NO_INGRESADO}" (este está "${fila.estado_taller}")` : SIN_SELECCION);
             habilitar(btnHistorial, !!fila, SIN_SELECCION);
-            habilitar(btnEstado, ingresado, fila ? 'Primero hay que registrar el ingreso a taller' : SIN_SELECCION);
             habilitar(btnEgreso, ingresado && !!fila.id_ingreso, fila ? 'Primero hay que registrar el ingreso a taller' : SIN_SELECCION);
         },
         alActivar: verHistorial,
@@ -101,7 +97,7 @@ export function montar(contenedor, { api }) {
         el('div', { class: 'filtros' }, fTaller.nodo, fEstado.nodo),
         tabla.contador,
         tabla.nodo,
-        el('div', { class: 'acciones-pie' }, btnIngreso, btnHistorial, btnEstado, btnEgreso,
+        el('div', { class: 'acciones-pie' }, btnIngreso, btnHistorial, btnEgreso,
             el('p', { class: 'texto-suave nota' }, 'Los equipos llegan acá desde Inventario → "Enviar a reparación".')));
 
     buscar.addEventListener('input', aplicarFiltros);
@@ -116,7 +112,6 @@ export function montar(contenedor, { api }) {
                 api.get('estados_taller.php'),
             ]);
             completos = equipos;
-            estadosTaller = estados;
             llenarSelect(fTaller.select, [{ valor: TODOS, texto: 'Todos' }, ...talleres.map((t) => t.taller)]);
             // Además de los del catálogo, los estados que tengan los equipos (p. ej. "No ingresado").
             const nombres = [...new Set([...estados.map((e) => e.estado), ...equipos.map((e) => e.estado_taller).filter(Boolean)])];
@@ -205,38 +200,6 @@ export function montar(contenedor, { api }) {
             },
         });
         sd.focus();
-    }
-
-    function actualizarEstado() {
-        const equipo = tabla.seleccionada;
-        if (!equipo || equipo.estado_taller === NO_INGRESADO) return;
-
-        const { nodo, select } = campoSelect('Nuevo estado', estadosTaller.map((e) => e.estado), { id: 'tal-nuevo-estado' });
-        if (estadosTaller.some((e) => e.estado === equipo.estado_taller)) {
-            select.value = equipo.estado_taller;
-        }
-
-        dialogoFormulario(`Estado de ${equipo.serie}`, [
-            fichaEquipo(equipo),
-            el('p', {}, 'Estado actual: ', el('strong', {}, textoCelda(equipo.estado_taller))),
-            nodo,
-        ], {
-            textoAceptar: 'Actualizar',
-            alAceptar: async () => {
-                try {
-                    await api.post('actualizar_estado.php', {
-                        id: equipo.id_estado, id_equipo: equipo.id_equipo, estado: select.value,
-                    });
-                } catch (error) {
-                    manejarError(error, 'No se pudo actualizar el estado');
-                    return false;
-                }
-                aviso(`El estado del equipo ${equipo.serie} se actualizó a "${select.value}".`, 'exito');
-                cargar();
-                return true;
-            },
-        });
-        select.focus();
     }
 
     async function egresar() {

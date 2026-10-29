@@ -777,6 +777,20 @@ select:disabled { opacity: 0.6; }
     font-weight: bold;
     box-shadow: inset 4px 0 0 var(--primario);
 }
+/* Selección múltiple (Inventario, Papelera): columna de casillas */
+.tabla-seleccionable .col-casilla { width: 2.6rem; padding-right: 0; text-align: center; }
+.tabla-seleccionable .col-casilla input { width: 1.05rem; height: 1.05rem; margin: 0; cursor: pointer; accent-color: var(--primario); }
+/* Lista de los ítems elegidos en los diálogos de acciones en lote */
+.lista-lote {
+    max-height: 12rem;
+    overflow-y: auto;
+    margin: 0.4rem 0 0.8rem;
+    padding: 0.4rem 0.8rem 0.4rem 1.6rem;
+    border: 1px solid var(--linea);
+    border-radius: 6px;
+    font-size: 0.92rem;
+}
+.lista-lote li { padding: 0.1rem 0; }
 .contador .pista { color: var(--acento); font-weight: bold; }
 .tabla-contenedor:focus-visible { outline-offset: -3px; }
 .th-orden {
