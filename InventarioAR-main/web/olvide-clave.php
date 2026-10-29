@@ -63,11 +63,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $enviado = flash('recuperar_ok');
-encabezado('Recuperar contraseña', '', ['noindex' => true]);
+encabezado('Recuperar contraseña', '', ['noindex' => true, 'ancho_completo' => true]);
+$icono = fn(string $trazos) => '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+    . 'stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' . $trazos . '</svg>';
 ?>
-<section class="caja-formulario caja-angosta">
+<section class="hero hero-corto" aria-labelledby="titulo-recuperar">
+    <div class="hero-imagen" aria-hidden="true">
+        <img src="img/portada/estadisticas-oscuro.webp" alt="" width="1568" height="744" decoding="async">
+    </div>
+    <div class="contenedor hero-texto">
+        <p class="producto"><img src="img/logo.svg" alt="" width="28" height="28"><?= e(NOMBRE_CORTO) ?></p>
+        <h1 id="titulo-recuperar">Recuperar contraseña</h1>
+        <p class="hero-bajada">Te enviamos a tu email un enlace para elegir una contraseña nueva. El enlace vale por una hora y se puede usar una sola vez.</p>
+        <ul class="hero-enlaces">
+            <li><a href="index.php"><?= $icono('<path d="M3 11 12 4l9 7"/><path d="M5 10v10h14V10"/>') ?>Conocé el sistema</a></li>
+            <li><a href="contacto.php"><?= $icono('<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>') ?>¿No tenés acceso a tu email? Escribinos</a></li>
+        </ul>
+    </div>
+</section>
+
+<div class="seccion seccion-formulario">
+<div class="contenedor">
+<section class="caja-formulario caja-angosta" aria-labelledby="titulo-caja">
     <?php if ($enviado): ?>
-        <h1>Revisá tu correo</h1>
+        <h2 id="titulo-caja">Revisá tu correo</h2>
         <p class="mensaje-info" role="status">
             Si <strong><?= e($enviado) ?></strong> corresponde a una cuenta activa, te enviamos un enlace para
             elegir una contraseña nueva. Vale por una hora.
@@ -76,7 +95,7 @@ encabezado('Recuperar contraseña', '', ['noindex' => true]);
            <a href="olvide-clave.php">pedí otro enlace</a>.</p>
         <p class="pie-formulario"><a href="ingresar.php">Volver a iniciar sesión</a></p>
     <?php else: ?>
-        <h1>¿Olvidaste tu contraseña?</h1>
+        <h2 id="titulo-caja">¿Olvidaste tu contraseña?</h2>
         <p class="texto-suave">Ingresá el email de tu cuenta y te enviamos un enlace para restablecerla.</p>
         <?php if ($error): ?>
             <p class="mensaje-error" role="alert"><?= e($error) ?></p>
@@ -96,5 +115,7 @@ encabezado('Recuperar contraseña', '', ['noindex' => true]);
         <p class="pie-formulario"><a href="ingresar.php">Volver a iniciar sesión</a></p>
     <?php endif; ?>
 </section>
+</div>
+</div>
 <?php
 pie();

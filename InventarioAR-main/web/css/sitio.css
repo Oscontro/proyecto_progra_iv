@@ -180,8 +180,8 @@
 .sitio-contenido { flex: 1; width: min(1180px, 100%); margin: 0 auto; padding: 2.5rem clamp(1rem, 4vw, 1.5rem) 3.5rem; }
 .sitio-contenido h2 { margin-top: 2.5rem; }
 .sitio-contenido a, .sitio-portada a { color: var(--acento); }
-.sitio-contenido a.btn { text-decoration: none; }
-.sitio-contenido a.btn-primario { color: #fff; }
+.sitio-contenido a.btn, .sitio-portada a.btn { text-decoration: none; }
+.sitio-contenido a.btn-primario, .sitio-portada a.btn-primario { color: #fff; }
 .texto-suave { color: var(--texto-suave); }
 
 /* ─────────── Portada: base ─────────── */
@@ -601,6 +601,9 @@
     border-radius: 8px;
 }
 .caja-formulario h1 { color: var(--texto); }
+.caja-formulario h2 { margin: 0 0 0.35rem; font-size: 1.5rem; }
+/* Ingresar y Crear cuenta: el formulario va debajo del hero */
+.seccion-formulario { padding: 56px 0 80px; }
 .caja-error { text-align: center; }
 .error-icono { margin: 0; font-size: 3rem; }
 

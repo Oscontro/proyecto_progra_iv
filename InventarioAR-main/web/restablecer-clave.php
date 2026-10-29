@@ -45,18 +45,37 @@ if ($recuperacion && $_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-encabezado('Nueva contraseña', '', ['noindex' => true]);
+encabezado('Nueva contraseña', '', ['noindex' => true, 'ancho_completo' => true]);
+$icono = fn(string $trazos) => '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+    . 'stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' . $trazos . '</svg>';
 ?>
-<section class="caja-formulario caja-angosta">
+<section class="hero hero-corto" aria-labelledby="titulo-nueva-clave">
+    <div class="hero-imagen" aria-hidden="true">
+        <img src="img/portada/inventario-oscuro.webp" alt="" width="1568" height="744" decoding="async">
+    </div>
+    <div class="contenedor hero-texto">
+        <p class="producto"><img src="img/logo.svg" alt="" width="28" height="28"><?= e(NOMBRE_CORTO) ?></p>
+        <h1 id="titulo-nueva-clave">Nueva contraseña</h1>
+        <p class="hero-bajada">Elegí una contraseña nueva para tu cuenta. Una vez guardada, ya podés ingresar con ella.</p>
+        <ul class="hero-enlaces">
+            <li><a href="index.php"><?= $icono('<path d="M3 11 12 4l9 7"/><path d="M5 10v10h14V10"/>') ?>Conocé el sistema</a></li>
+            <li><a href="contacto.php"><?= $icono('<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>') ?>¿Problemas con el enlace? Escribinos</a></li>
+        </ul>
+    </div>
+</section>
+
+<div class="seccion seccion-formulario">
+<div class="contenedor">
+<section class="caja-formulario caja-angosta" aria-labelledby="titulo-caja">
     <?php if (!$recuperacion): ?>
-        <h1>El enlace no es válido</h1>
+        <h2 id="titulo-caja">El enlace no es válido</h2>
         <p class="mensaje-error" role="alert">
             El enlace venció, ya se usó o está incompleto. Los enlaces valen por una hora y una sola vez.
         </p>
         <p><a class="btn btn-primario btn-ancho" href="olvide-clave.php">Pedir un enlace nuevo</a></p>
         <p class="pie-formulario"><a href="ingresar.php">Volver a iniciar sesión</a></p>
     <?php else: ?>
-        <h1>Elegí una contraseña nueva</h1>
+        <h2 id="titulo-caja">Elegí una contraseña nueva</h2>
         <p class="texto-suave">Para la cuenta <strong><?= e($recuperacion['username']) ?></strong>.</p>
         <?php if ($error): ?>
             <p class="mensaje-error" role="alert"><?= e($error) ?></p>
@@ -81,5 +100,7 @@ encabezado('Nueva contraseña', '', ['noindex' => true]);
         </form>
     <?php endif; ?>
 </section>
+</div>
+</div>
 <?php
 pie();

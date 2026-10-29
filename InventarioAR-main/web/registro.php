@@ -52,19 +52,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $registrado = flash('registro_ok');
 encabezado('Registrarse', 'registro', [
     'descripcion' => 'Creá tu cuenta en el ' . NOMBRE_SISTEMA . '. Un administrador aprueba la solicitud antes del primer ingreso.',
+    'ancho_completo' => true,
 ]);
+$icono = fn(string $trazos) => '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+    . 'stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' . $trazos . '</svg>';
 ?>
-<section class="caja-formulario">
+<section class="hero hero-corto" aria-labelledby="titulo-registro">
+    <div class="hero-imagen" aria-hidden="true">
+        <img src="img/portada/repuestos-oscuro.webp" alt="" width="1568" height="744" decoding="async">
+    </div>
+    <div class="contenedor hero-texto">
+        <p class="producto"><img src="img/logo.svg" alt="" width="28" height="28"><?= e(NOMBRE_CORTO) ?></p>
+        <h1 id="titulo-registro">Crear una cuenta</h1>
+        <p class="hero-bajada">Solicitá tu acceso al sistema. Las cuentas nuevas tienen perfil <strong>Técnico</strong> y quedan pendientes hasta que un administrador las aprueba.</p>
+        <ul class="hero-enlaces">
+            <li><a href="index.php#acceso"><?= $icono('<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>') ?>Cómo funciona la aprobación</a></li>
+            <li><a href="contacto.php"><?= $icono('<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>') ?>Hacé una consulta</a></li>
+        </ul>
+    </div>
+</section>
+
+<div class="seccion seccion-formulario">
+<div class="contenedor">
+<section class="caja-formulario" aria-labelledby="titulo-caja">
     <?php if ($registrado): ?>
-        <h1>¡Solicitud enviada!</h1>
+        <h2 id="titulo-caja">¡Solicitud enviada!</h2>
         <p class="mensaje-info" role="status">
             La cuenta <strong><?= e($registrado) ?></strong> quedó registrada y pendiente de aprobación.
             Cuando un administrador la apruebe vas a poder ingresar con tu usuario y contraseña.
         </p>
         <p><a class="btn btn-primario" href="index.php">Volver al inicio</a></p>
     <?php else: ?>
-        <h1>Crear una cuenta</h1>
-        <p class="texto-suave">Completá tus datos. Las cuentas nuevas tienen perfil <strong>Técnico</strong>.</p>
+        <h2 id="titulo-caja">Tus datos</h2>
+        <p class="texto-suave">Completá el formulario para enviar tu solicitud.</p>
         <?php if ($error): ?>
             <p class="mensaje-error" role="alert"><?= e($error) ?></p>
         <?php endif; ?>
@@ -118,5 +138,7 @@ encabezado('Registrarse', 'registro', [
         <p class="pie-formulario">¿Ya tenés cuenta? <a href="ingresar.php">Iniciá sesión</a></p>
     <?php endif; ?>
 </section>
+</div>
+</div>
 <?php
 pie();
