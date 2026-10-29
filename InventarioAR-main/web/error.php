@@ -31,13 +31,31 @@ $codigo = (string)($_GET['codigo'] ?? '');
     ?? [400, 'Ocurrió un error', 'No se pudo completar la operación.', ['Volver al inicio', 'index.php']];
 
 http_response_code($estado);
-encabezado($titulo, '', ['noindex' => true]);
+encabezado($titulo, '', ['noindex' => true, 'ancho_completo' => true]);
+$icono = fn(string $trazos) => '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+    . 'stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' . $trazos . '</svg>';
 ?>
-<section class="caja-formulario caja-error" role="alert">
-    <p class="error-icono" aria-hidden="true">⚠️</p>
-    <h1><?= e($titulo) ?></h1>
-    <p><?= e($mensaje) ?></p>
-    <p><a class="btn btn-primario" href="<?= e($destino) ?>"><?= e($enlace) ?></a></p>
+<section class="hero hero-corto hero-error" aria-labelledby="titulo-error">
+    <div class="hero-imagen" aria-hidden="true">
+        <img src="img/portada/inventario-oscuro.webp" alt="" width="1568" height="744" decoding="async">
+    </div>
+    <div class="contenedor hero-texto" role="alert">
+        <p class="producto"><img src="img/logo.svg" alt="" width="28" height="28"><?= e(NOMBRE_CORTO) ?> <span class="insignia-etiqueta">Error <?= $estado ?></span></p>
+        <h1 id="titulo-error"><?= e($titulo) ?></h1>
+        <p class="hero-bajada"><?= e($mensaje) ?></p>
+        <div class="hero-acciones">
+            <a class="boton boton-contorno" href="<?= e($destino) ?>"><?= e($enlace) ?>
+                <?= $icono('<path d="M5 12h14M13 6l6 6-6 6"/>') ?></a>
+        </div>
+        <ul class="hero-enlaces">
+            <?php if ($destino !== 'index.php'): ?>
+                <li><a href="index.php"><?= $icono('<path d="M3 11 12 4l9 7"/><path d="M5 10v10h14V10"/>') ?>Volver al inicio</a></li>
+            <?php endif; ?>
+            <?php if ($destino !== 'contacto.php'): ?>
+                <li><a href="contacto.php"><?= $icono('<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>') ?>¿Necesitás ayuda? Escribinos</a></li>
+            <?php endif; ?>
+        </ul>
+    </div>
 </section>
 <?php
 pie();

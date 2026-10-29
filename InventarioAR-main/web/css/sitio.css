@@ -604,8 +604,9 @@
 .caja-formulario h2 { margin: 0 0 0.35rem; font-size: 1.5rem; }
 /* Ingresar y Crear cuenta: el formulario va debajo del hero */
 .seccion-formulario { padding: 56px 0 80px; }
-.caja-error { text-align: center; }
-.error-icono { margin: 0; font-size: 3rem; }
+/* Página de error: el hero ocupa la pantalla (no hay formulario debajo) */
+.sitio-portada:has(.hero-error) { display: flex; flex-direction: column; }
+.hero-error { flex: 1; justify-content: center; min-height: 420px; }
 
 .formulario-sitio input[type="email"],
 .formulario-sitio textarea {
