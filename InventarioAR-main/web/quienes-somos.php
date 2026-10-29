@@ -36,7 +36,9 @@ $flecha = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="c
     . 'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>';
 ?>
 <section class="hero hero-corto" aria-labelledby="titulo-quienes">
-    <div class="hero-fondo" aria-hidden="true"><span class="haz"></span></div>
+    <div class="hero-imagen" aria-hidden="true">
+        <img src="img/portada/estadisticas-oscuro.webp" alt="" width="1568" height="744" decoding="async">
+    </div>
     <div class="contenedor hero-texto">
         <p class="insignia"><span class="punto" aria-hidden="true"></span>Proyecto Integrador · UTN FRH <span class="insignia-etiqueta">Programación IV</span></p>
         <h1 id="titulo-quienes" class="degradado">Quiénes somos</h1>

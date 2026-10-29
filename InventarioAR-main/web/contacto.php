@@ -80,10 +80,31 @@ $mapa = 'https://maps.google.com/maps?q=' . rawurlencode(DIRECCION) . '&z=16&out
 encabezado('Contacto', 'contacto', [
     'mapa' => true,
     'descripcion' => 'Contacto del ' . NOMBRE_SISTEMA . ': mapa de la UTN Facultad Regional Haedo y formulario de consulta.',
+    'ancho_completo' => true,
 ]);
+$icono = fn(string $trazos) => '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+    . 'stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' . $trazos . '</svg>';
 ?>
-<h1>Contacto</h1>
-<div class="contacto">
+<section class="hero hero-corto" aria-labelledby="titulo-contacto">
+    <div class="hero-imagen" aria-hidden="true">
+        <img src="img/portada/repuestos-oscuro.webp" alt="" width="1568" height="744" decoding="async">
+    </div>
+    <div class="contenedor hero-texto">
+        <p class="producto"><img src="img/logo.svg" alt="" width="28" height="28"><?= e(NOMBRE_CORTO) ?></p>
+        <h1 id="titulo-contacto">Contacto</h1>
+        <p class="hero-bajada">
+            ¿Tenés dudas sobre el sistema o querés pedir acceso? Escribinos desde el formulario y te
+            respondemos a la brevedad. También podés encontrarnos en la UTN Facultad Regional Haedo.
+        </p>
+        <ul class="hero-enlaces">
+            <li><a href="#consulta"><?= $icono('<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>') ?>Enviar una consulta</a></li>
+            <li><a href="index.php#preguntas"><?= $icono('<circle cx="12" cy="12" r="9"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3"/><path d="M12 17h.01"/>') ?>Preguntas frecuentes</a></li>
+        </ul>
+    </div>
+</section>
+
+<section class="seccion" aria-label="Ubicación y formulario de consulta">
+<div class="contenedor contacto">
     <section class="contacto-mapa" aria-labelledby="titulo-ubicacion">
         <h2 id="titulo-ubicacion">Dónde estamos</h2>
         <address>
@@ -95,7 +116,7 @@ encabezado('Contacto', 'contacto', [
                 referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe>
     </section>
 
-    <section class="contacto-formulario" aria-labelledby="titulo-consulta">
+    <section id="consulta" class="contacto-formulario" aria-labelledby="titulo-consulta">
         <h2 id="titulo-consulta">Envianos tu consulta</h2>
         <?php if ($enviada): ?>
             <p class="mensaje-info" role="status">¡Gracias! Recibimos tu consulta.</p>
@@ -131,5 +152,6 @@ encabezado('Contacto', 'contacto', [
         </form>
     </section>
 </div>
+</section>
 <?php
 pie();
