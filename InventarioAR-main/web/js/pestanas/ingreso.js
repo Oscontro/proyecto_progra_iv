@@ -24,6 +24,12 @@ const COLUMNAS_EXCEL = {
     observaciones: 'ult_observacion', observacion: 'ult_observacion',
 };
 const OBLIGATORIAS_EXCEL = ['tipo', 'marca', 'modelo', 'numero_serie', 'escala', 'sector', 'estado'];
+// Formato que se explica en la ayuda y encabezados de la plantilla: [encabezado, obligatoria, ejemplo].
+const FORMATO_EXCEL = [
+    ['Tipo', true, 'Handie-Talkie'], ['Marca', true, 'Motorola'], ['Modelo', true, 'DEP450 V'],
+    ['N° Serie', true, '752ITG1629'], ['Escala', true, 'AEP'], ['Sector', true, 'Rampa'],
+    ['Estado', true, 'En Uso'], ['Potencia', false, '5W'], ['Observaciones', false, 'Con cargador'],
+];
 // Correcciones que aplica el escritorio al importar (después de pasar a Título).
 const CORRECCIONES_EXCEL = {
     'Base Vhf Fm': 'Base VHF FM', 'Vhf Aeronautico': 'VHF Aeronautico', 'Lineal Hf': 'Lineal HF',
@@ -75,7 +81,7 @@ export function montar(contenedor, { api }) {
             el('div', { class: 'panel-ingreso panel-imagen', 'aria-live': 'polite' },
                 el('h3', {}, 'Imagen del modelo'), imagen, sinImagen)),
         el('div', { class: 'acciones-pie' },
-            el('button', { type: 'button', class: 'btn btn-secundario', onclick: () => archivo.click() }, '📊 Importar desde Excel'),
+            el('button', { type: 'button', class: 'btn btn-secundario', onclick: ayudaImportacion }, '📊 Importar desde Excel'),
             archivo,
             el('button', { type: 'button', class: 'btn btn-secundario boton-derecha', onclick: () => limpiar(true) }, 'Limpiar'),
             btnGuardar));
@@ -252,6 +258,39 @@ export function montar(contenedor, { api }) {
     }
 
     // ═══════════════ Importar desde Excel ═══════════════
+    // Antes de elegir el archivo se muestra el formato aceptado y se ofrece la plantilla.
+    function ayudaImportacion() {
+        const btnPlantilla = el('button', { type: 'button', class: 'btn btn-secundario', onclick: descargarPlantilla }, '📥 Descargar plantilla');
+        const btnElegir = el('button', {
+            type: 'button', class: 'btn btn-primario boton-derecha',
+            onclick: () => { modal.close(); archivo.click(); },
+        }, '📂 Elegir archivo…');
+        const modal = dialogo('Importar equipos desde Excel', [
+            el('p', {}, 'Se lee la primera hoja de un archivo .xlsx o .xls. La primera fila tiene que tener los encabezados '
+                + 'y cada fila siguiente es un equipo. El orden de las columnas no importa.'),
+            el('div', { class: 'tabla-contenedor' },
+                el('table', { class: 'tabla' },
+                    el('thead', {}, el('tr', {}, ['Columna', '¿Obligatoria?', 'Ejemplo'].map((t) => el('th', { scope: 'col' }, t)))),
+                    el('tbody', {}, FORMATO_EXCEL.map(([columna, obligatoria, ejemplo]) => el('tr', {},
+                        el('td', {}, columna), el('td', {}, obligatoria ? 'Sí' : 'No'), el('td', {}, ejemplo)))))),
+            el('ul', {},
+                el('li', {}, 'Mayúsculas y tildes en los encabezados dan igual: "N° Serie", "Número de serie" o "Serie" sirven.'),
+                el('li', {}, 'El N° de serie y la escala se pasan a mayúsculas y al N° de serie se le quitan los espacios.'),
+                el('li', {}, 'Antes de guardar se revisa cada fila; los tipos, marcas, modelos o escalas que no existan se crean solo si confirmás.')),
+        ], { acciones: [btnPlantilla, btnElegir], ancho: 'medio' });
+    }
+
+    async function descargarPlantilla() {
+        try {
+            // Solo encabezados: una fila de ejemplo se importaría si no se borra.
+            const fila = Object.fromEntries(FORMATO_EXCEL.map(([columna]) => [columna, '']));
+            await exportarExcel([fila], 'plantilla_importacion_equipos.xlsx', { hoja: 'Equipos', margen: 12 });
+        } catch (error) {
+            console.error(error);
+            aviso('No se pudo generar la plantilla.', 'error');
+        }
+    }
+
     async function importarExcel(file) {
         archivo.value = '';   // permite volver a elegir el mismo archivo
         if (!file) return;

@@ -49,6 +49,7 @@
     --error-texto: var(--rojo-oscuro);
     --info-fondo: var(--azul-claro);
     --sombra-tarjeta: 0 1px 2px rgba(14, 26, 43, 0.04), 0 8px 24px -12px rgba(14, 26, 43, 0.12);
+    --textura: url("../img/textura-circuito.svg");   /* fondo de los paneles */
     --sombra-flotante: 0 16px 40px -12px rgba(14, 26, 43, 0.35);
     --telon: rgba(38, 50, 56, 0.55);
     --lupa: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%234a5568' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-3.5-3.5'/%3E%3C/svg%3E");
@@ -102,6 +103,7 @@
     --info-fondo: rgba(30, 136, 229, 0.14);
     --sombra: 0 2px 10px rgba(0, 0, 0, 0.4);
     --sombra-tarjeta: 0 1px 0 rgba(255, 255, 255, 0.02) inset, 0 12px 32px -16px rgba(0, 0, 0, 0.6);
+    --textura: url("../img/textura-circuito-oscuro.svg");
     --sombra-flotante: 0 18px 44px -10px rgba(0, 0, 0, 0.7);
     --telon: rgba(3, 8, 18, 0.7);
     --lupa: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2398a5bb' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-3.5-3.5'/%3E%3C/svg%3E");
@@ -447,6 +449,11 @@ input[type="text"]:focus, input[type="password"]:focus, input[type="email"]:focu
     box-shadow: var(--sombra-tarjeta);
 }
 .panel h2 { font-size: 1.35rem; }
+/* Textura de circuito en las pestañas: se desvanece hacia arriba, donde está el contenido. */
+.paneles .panel {
+    background-image: linear-gradient(to bottom, var(--superficie) 15%, transparent 75%), var(--textura);
+    background-size: 100% 100%, 304px 304px;
+}
 
 /* En pantalla ancha y con altura suficiente la página no se desplaza: el panel ocupa
    el alto libre y la tabla principal se achica para que los botones de abajo queden
@@ -502,7 +509,7 @@ input[type="text"]:focus, input[type="password"]:focus, input[type="email"]:focu
     color: var(--texto);
 }
 .modal::backdrop { background: var(--telon); backdrop-filter: blur(2px); }
-.modal-acciones { display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.25rem; }
+.modal-acciones { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.75rem; margin-top: 1.25rem; }
 
 /* ─────────── Pantallas angostas ─────────── */
 
@@ -688,7 +695,7 @@ select:disabled { opacity: 0.6; }
 }
 
 /* Tablas */
-.tabla-contenedor { overflow: auto; max-height: 420px; border: 1px solid var(--borde); border-radius: 12px; }
+.tabla-contenedor { overflow: auto; max-height: 420px; border: 1px solid var(--borde); border-radius: 12px; background: var(--superficie); }
 .tabla { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
 .tabla th {
     position: sticky;
